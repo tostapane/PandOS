@@ -1,3 +1,6 @@
+#ifndef PANDOS_INITIAL_H
+#define PANDOS_INITIAL_H
+
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 
@@ -24,3 +27,5 @@ extern void test(void);
 extern void uTLB_RefillHandler(void);
 extern void exceptionHandler(void);
 extern void scheduler(void);
+
+#endif // PANDOS_INITIAL_H

@@ -23,34 +23,6 @@ unsigned int subDevice[NRSEMAPHORES];
 // semaphore to support the pseudo clock
 unsigned int pseudoClock;
 
-/* La TLB (Translation Lookaside Buffer) è una piccola cache situata
- * nel MMU che serve a velocizzare il processo di traduzione degli
- * indirizzi virtuali (usati nei programmi) in indirizzi fisici (della RAM).
- * Contiene una Page Table Entries (PTE) con indirizzi virtuali e i
-corrispondenti
- * indirzzi fisici, e un flag di stato su di essi che indica se la traduzione è
- * valida o scrivibile per quell'indirizzo.
- *
- * Interagisce con la CPU invi~/Desktop/uni/sistemiOperativi/progetto/mio andole
-indirizzi fisici quando li richiede
- * Interagisce con il sistema operativo (nucleus/kernel) quando c'è un TLB miss,
- * il quale interviene per aggiornarla con i dati corretti che recupera dalla
-RAM.
- *
-
- // funzione copiata dalla sezione 4 (dovrebbe essere solo un segnalibro
- // per delle funzioni che dovranno essere implementate nella fase 3)
- // (da comunque warning)
- void uTLB_RefillHandler() {
-  int prid = getPRID();
-
-  setENTRYHI(0x80000000);
-  setENTRYLO(0x00000000);
-  TLBWR();
-  LDST((state_t*) BIOSDATAPAGE);
-}
-*/
-
 int main() {
 
   // 2.2
