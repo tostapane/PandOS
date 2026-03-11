@@ -1,7 +1,12 @@
 #ifndef PANDOS_EXCEPTIONS_H
 #define PANDOS_EXCEPTIONS_H
 
+#include "../../headers/const.h"
 #include "../../headers/types.h"
+#include "../../phase1/headers/asl.h"
+#include "../../phase1/headers/pcb.h"
+#include "./interrupts.h"
+#include "./scheduler.h"
 #include <uriscv/liburiscv.h>
 
 // SEZIONE 2.1: Dichiarazione delle variabili globali del Nucleo

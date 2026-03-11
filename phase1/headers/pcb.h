@@ -1,4 +1,5 @@
-// SPDX-FileCopyrightText: 2022 Luca Bassi, Gaia Clerici, Mirco Dondi, Fabio Gaiba
+// SPDX-FileCopyrightText: 2022 Luca Bassi, Gaia Clerici, Mirco Dondi, Fabio
+// Gaiba
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -8,7 +9,8 @@
 #include "../../headers/listx.h"
 #include "../../headers/types.h"
 
-// Initialize "pcbFree_h" and add elements of "pcbFree_table" to the list "pcbFree_h"
+// Initialize "pcbFree_h" and add elements of "pcbFree_table" to the list
+// "pcbFree_h"
 void initPcbs();
 
 // Add PCB "p" to the list "pcbFree_h"
@@ -46,5 +48,8 @@ pcb_t *removeChild(pcb_t *p);
 
 // Remove and return the PCB "p" from the parent's children list
 pcb_t *outChild(pcb_t *p);
+
+static struct list_head pcbFree_h;
+static pcb_t pcbFree_table[MAXPROC];
 
 #endif

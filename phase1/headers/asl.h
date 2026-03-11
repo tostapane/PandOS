@@ -24,4 +24,8 @@ pcb_t *outBlocked(pcb_t *p);
 // Return the first blocked PCB of the semaphore with key "semAdd"
 pcb_t *headBlocked(int *semAdd);
 
+static semd_t semd_table[MAXPROC];
+static struct list_head semdFree_h;
+static struct list_head semd_h;
+
 #endif
