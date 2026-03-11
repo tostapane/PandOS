@@ -58,3 +58,7 @@ dkms.conf
 /.vscode/
 /build/
 *.uriscv
+
+
+# clangd configuration
+.clangd

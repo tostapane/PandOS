@@ -26,11 +26,11 @@ typedef unsigned int size_tt;
     return: puntatore alla struttura dati che contiene il list_head puntato da
         ptr
 */
-#define container_of(ptr, type, member)                    \
-    ({                                                     \
-        const typeof(((type *)0)->member) *__mptr = (ptr); \
-        (type *)((char *)__mptr - offsetof(type, member)); \
-    })
+#define container_of(ptr, type, member)                                        \
+  ({                                                                           \
+    const typeof(((type *)0)->member) *__mptr = (ptr);                         \
+    (type *)((char *)__mptr - offsetof(type, member));                         \
+  })
 
 /*
     Macro che restituisce l'offset in byte dall'inizio di una struttura a
@@ -52,9 +52,8 @@ typedef unsigned int size_tt;
     una lista bidirezionale. Per creare liste di strutture arbitrarie basta
     inserire al loro interno un campo di tipo list_head.
 */
-struct list_head
-{
-    struct list_head *next, *prev;
+struct list_head {
+  struct list_head *next, *prev;
 };
 
 /*
@@ -68,8 +67,7 @@ struct list_head
     Esempio:
     struct list_head lista = LIST_HEAD_INIT(lista);
 */
-#define LIST_HEAD_INIT(name) \
-    {&(name), &(name)}
+#define LIST_HEAD_INIT(name) {&(name), &(name)}
 
 /*
     Macro che dichiara e inizializza una nuova lista. Rispetto alla macro
@@ -90,10 +88,9 @@ struct list_head
 
     return: void
 */
-static inline void INIT_LIST_HEAD(struct list_head *list)
-{
-    list->next = list;
-    list->prev = list;
+static inline void INIT_LIST_HEAD(struct list_head *list) {
+  list->next = list;
+  list->prev = list;
 }
 
 /*
@@ -103,12 +100,12 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
     prev: elemento che deve precedere new
     next: elemento che deve seguire new
 */
-static inline void __list_add(struct list_head *new, struct list_head *prev, struct list_head *next)
-{
-    next->prev = new;
-    new->next = next;
-    new->prev = prev;
-    prev->next = new;
+static inline void __list_add(struct list_head *new, struct list_head *prev,
+                              struct list_head *next) {
+  next->prev = new;
+  new->next = next;
+  new->prev = prev;
+  prev->next = new;
 }
 
 /*
@@ -119,9 +116,8 @@ static inline void __list_add(struct list_head *new, struct list_head *prev, str
 
     return: void
 */
-static inline void list_add(struct list_head *new, struct list_head *head)
-{
-    __list_add(new, head, head->next);
+static inline void list_add(struct list_head *new, struct list_head *head) {
+  __list_add(new, head, head->next);
 }
 
 /*
@@ -132,9 +128,9 @@ static inline void list_add(struct list_head *new, struct list_head *head)
 
     return: void
 */
-static inline void list_add_tail(struct list_head *new, struct list_head *head)
-{
-    __list_add(new, head->prev, head);
+static inline void list_add_tail(struct list_head *new,
+                                 struct list_head *head) {
+  __list_add(new, head->prev, head);
 }
 
 /*
@@ -145,10 +141,9 @@ static inline void list_add_tail(struct list_head *new, struct list_head *head)
 
     return: void
 */
-static inline void __list_del(struct list_head *prev, struct list_head *next)
-{
-    next->prev = prev;
-    prev->next = next;
+static inline void __list_del(struct list_head *prev, struct list_head *next) {
+  next->prev = prev;
+  prev->next = next;
 }
 
 /*
@@ -158,11 +153,10 @@ static inline void __list_del(struct list_head *prev, struct list_head *next)
 
     return: void
 */
-static inline void list_del(struct list_head *entry)
-{
-    __list_del(entry->prev, entry->next);
-    entry->next = entry;
-    entry->prev = entry;
+static inline void list_del(struct list_head *entry) {
+  __list_del(entry->prev, entry->next);
+  entry->next = entry;
+  entry->prev = entry;
 }
 
 /*
@@ -173,9 +167,9 @@ static inline void list_del(struct list_head *entry)
 
     return: 0 se list non e' l'ultimo elemento, 1 altrimenti
 */
-static inline int list_is_last(const struct list_head *list, const struct list_head *head)
-{
-    return list->next == head;
+static inline int list_is_last(const struct list_head *list,
+                               const struct list_head *head) {
+  return list->next == head;
 }
 
 /*
@@ -185,9 +179,8 @@ static inline int list_is_last(const struct list_head *list, const struct list_h
 
     return: 1 se la lista e' vuota, 0 altrimenti
 */
-static inline int list_empty(const struct list_head *head)
-{
-    return head->next == head;
+static inline int list_empty(const struct list_head *head) {
+  return head->next == head;
 }
 
 /*
@@ -198,12 +191,11 @@ static inline int list_empty(const struct list_head *head)
 
     return: current->next se la lista non e' vuota, NULL altrimenti
 */
-static inline struct list_head *list_next(const struct list_head *current)
-{
-    if (list_empty(current))
-        return NULL;
-    else
-        return current->next;
+static inline struct list_head *list_next(const struct list_head *current) {
+  if (list_empty(current))
+    return NULL;
+  else
+    return current->next;
 }
 
 /*
@@ -214,12 +206,11 @@ static inline struct list_head *list_next(const struct list_head *current)
 
     return: current->prev se la lista non e' vuota, NULL altrimenti
 */
-static inline struct list_head *list_prev(const struct list_head *current)
-{
-    if (list_empty(current))
-        return NULL;
-    else
-        return current->prev;
+static inline struct list_head *list_prev(const struct list_head *current) {
+  if (list_empty(current))
+    return NULL;
+  else
+    return current->prev;
 }
 
 /*
@@ -239,7 +230,8 @@ static inline struct list_head *list_prev(const struct list_head *current)
     pos: puntatore da utilizzare per iterare sugli elementi
     head: inizio della lista (elemento sentinella)
 */
-#define list_for_each(pos, head) for (pos = (head)->next; pos != (head); pos = pos->next)
+#define list_for_each(pos, head)                                               \
+  for (pos = (head)->next; pos != (head); pos = pos->next)
 
 /*
     Macro analoga a list_for_each ma che procede a ritroso.
@@ -247,7 +239,8 @@ static inline struct list_head *list_prev(const struct list_head *current)
     pos: puntatore da utilizzare per iterare sugli elementi
     head: inizio della lista (elemento sentinella)
 */
-#define list_for_each_prev(pos, head) for (pos = (head)->prev; pos != (head); pos = pos->prev)
+#define list_for_each_prev(pos, head)                                          \
+  for (pos = (head)->prev; pos != (head); pos = pos->prev)
 
 /*
     Macro che costruisce un ciclo for per iterare sul contenuto di una lista;
@@ -258,9 +251,10 @@ static inline struct list_head *list_prev(const struct list_head *current)
     head: inizio della lista (elemento sentinella)
     member: nome del campo contenente la list_head
 */
-#define list_for_each_entry(pos, head, member)                                           \
-    for (pos = container_of((head)->next, typeof(*pos), member); &pos->member != (head); \
-         pos = container_of(pos->member.next, typeof(*pos), member))
+#define list_for_each_entry(pos, head, member)                                 \
+  for (pos = container_of((head)->next, typeof(*pos), member);                 \
+       &pos->member != (head);                                                 \
+       pos = container_of(pos->member.next, typeof(*pos), member))
 
 /*
     Macro analoga a list_for_each_entry ma che procede a ritroso
@@ -269,8 +263,9 @@ static inline struct list_head *list_prev(const struct list_head *current)
     head: inizio della lista (elemento sentinella)
     member: nome del campo contenente la list_head
 */
-#define list_for_each_entry_reverse(pos, head, member)                                   \
-    for (pos = container_of((head)->prev, typeof(*pos), member); &pos->member != (head); \
-         pos = container_of(pos->member.prev, typeof(*pos), member))
+#define list_for_each_entry_reverse(pos, head, member)                         \
+  for (pos = container_of((head)->prev, typeof(*pos), member);                 \
+       &pos->member != (head);                                                 \
+       pos = container_of(pos->member.prev, typeof(*pos), member))
 
 #endif
