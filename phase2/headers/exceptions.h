@@ -1,6 +1,7 @@
 #ifndef PANDOS_EXCEPTIONS_H
 #define PANDOS_EXCEPTIONS_H
 
+#include "../../../uriscv-latest/src/include/uriscv/cpu.h"
 #include "../../headers/const.h"
 #include "../../headers/types.h"
 #include "../../phase1/headers/asl.h"

@@ -1,6 +1,22 @@
 #include "headers/exceptions.h"
 
 /**
+ * SEZIONE 4: TLB-Refill
+ *
+ * Gestore "placeholder" per gli eventi di TLB-Refill.
+ *
+ * Questa funzione è un gestore speciale che viene chiamato solo per eventi di
+ * TLB-Refill. Per la Fase 2, il suo codice è fisso e fornito dalla
+ * documentazione.
+ */
+void uTLB_RefillHandler(void) {
+  setENTRYHI(0x80000000);
+  setENTRYLO(0x00000000);
+  TLBWR();
+  LDST((state_t *)BIOSDATAPAGE);
+}
+
+/**
  * SEZIONE 5: Exception Handling
  *
  * Punto di ingresso principale per la gestione di tutte le eccezioni.
@@ -24,8 +40,38 @@
  *    - Tutti gli altri `ExcCode` (Program Traps): chiama
  * `programTrapHandler()`.
  */
+
+// TODO: da rimuovere una volta implementata la funzione in interrupts.c
+extern void interruptHandler();
+
 void exceptionHandler(void) {
-  // Implementare la logica di dispatching qui.
+  // id del processore che ha causato l'eccezione
+  unsigned int procsrID = getPRID();
+
+  // processor state at the time of the exception
+  // otteniamo un puntatore allo stato di quel processore
+  state_t *exceptionState = GET_EXCEPTION_STATE_PTR(procsrID);
+
+  // causa dello stato salvato
+  unsigned int cause = exceptionState->cause;
+
+  if (CAUSE_IS_INT(cause)) {
+    // gestore interrupt
+    interruptHandler();
+  } else {
+    // estrazione excode dallo stato salvato
+    unsigned int exCode = (cause & CAUSE_EXCCODE_MASK) >> CAUSESHIFT;
+
+    // indirizzamento al gestore dell'eccezione corretto
+
+    if (exCode == 8 || exCode == 11) {
+      syscallHandler();
+    } else if (exCode >= 24 && exCode <= 28) {
+      tlbHandler();
+    } else {
+      programTrapHandler();
+    }
+  }
 }
 
 /**
@@ -67,6 +113,12 @@ static void recursive_terminate(pcb_t *proc);
 
 void syscallHandler(void) {
   // Puntatore allo stato del processore al momento dell'eccezione
+  // TODO: an3dd:
+  // assicurarsi che non sia meglio usare la funzione
+  // state_t *exceptionState = GET_EXCEPTION_STATE_PTR(procsrID);
+  // "You can use the GET_EXCEPTION_STATE_PTR(id) macro to access the
+  // BIOS Data Page [Section 11] of the various CPUs."
+  // read section 5
   state_t *exception_state = (state_t *)BIOSDATAPAGE;
 
   // Estrae il numero della SYSCALL dal registro a0
@@ -220,7 +272,8 @@ static void recursive_terminate(pcb_t *proc) {
     pcb_t *unblocked = outBlocked(proc);
     if (unblocked != NULL) { // Controlla se era bloccato su un semaforo di I/O
       int *sem_addr = unblocked->p_semAdd;
-      if (sem_addr >= &subDevice[0] && sem_addr < &subDevice[SEMDEVLEN]) {
+      if ((void *)sem_addr >= (void *)&subDevice[0] &&
+          (void *)sem_addr < (void *)&subDevice[SEMDEVLEN]) {
         softBlockCount--;
       }
     }
@@ -253,6 +306,13 @@ static void recursive_terminate(pcb_t *proc) {
  * `LDCXT` usando il contesto salvato in `sup_exceptContext[GENERALEXCEPT]` per
  * passare il controllo al gestore di eccezioni del Livello di Supporto.
  */
+// TODO:   TIP an3dd
+// state_t *exceptionState = GET_EXCEPTION_STATE_PTR(procsrID);
+// anziché
+// state_t *exceptionState = (state_t *)BIOSDATAPAGE;
+// "You can use the GET_EXCEPTION_STATE_PTR(id) macro to access the
+// BIOS Data Page [Section 11] of the various CPUs."
+// read section 5
 void programTrapHandler(void) {
   // Implementare la logica "Pass Up or Die" per Program Trap qui.
 }
@@ -273,22 +333,14 @@ void programTrapHandler(void) {
  * `sup_exceptState[PGFAULTEXCEPT]`. b. Esegui `LDCXT` con il contesto
  * `sup_exceptContext[PGFAULTEXCEPT]`.
  */
+
+// TODO:   TIP an3dd
+// state_t *exceptionState = GET_EXCEPTION_STATE_PTR(procsrID);
+// anziché
+// state_t *exceptionState = (state_t *)BIOSDATAPAGE;
+// "You can use the GET_EXCEPTION_STATE_PTR(id) macro to access the
+// BIOS Data Page [Section 11] of the various CPUs."
+// read section 5
 void tlbHandler(void) {
   // Implementare la logica "Pass Up or Die" per TLB exception qui.
-}
-
-/**
- * SEZIONE 4: TLB-Refill
- *
- * Gestore "placeholder" per gli eventi di TLB-Refill.
- *
- * Questa funzione è un gestore speciale che viene chiamato solo per eventi di
- * TLB-Refill. Per la Fase 2, il suo codice è fisso e fornito dalla
- * documentazione.
- */
-void uTLB_RefillHandler(void) {
-  setENTRYHI(0x80000000);
-  setENTRYLO(0x00000000);
-  TLBWR();
-  LDST((state_t *)BIOSDATAPAGE);
 }
