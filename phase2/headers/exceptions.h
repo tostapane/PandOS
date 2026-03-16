@@ -32,12 +32,6 @@ extern int soft_block_count;
 extern struct list_head ready_queue;
 
 /**
- * @brief Puntatore al PCB del processo attualmente in esecuzione (in stato
- * "running"). Se `NULL`, nessun processo è in esecuzione.
- */
-extern pcb_t *current_process;
-
-/**
  * @brief Array dei semafori per i dispositivi e per il pseudo-clock.
  * L'indice del semaforo corrisponde a un device specifico.
  * Dimensione: 48 (device) + 1 (pseudo-clock) = 49.

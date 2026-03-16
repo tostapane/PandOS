@@ -1,8 +1,13 @@
 #include "./headers/interrupts.h"
 #include "../../uriscv-latest/src/include/uriscv/cpu.h"
+#include "headers/initial.h"
 #include <uriscv/const.h>
 #include <uriscv/types.h>
-
+/**
+ * todo:
+ * - rimuovere syscall da non timer
+ *  -gestire errori
+ */
 void handleInterrupt(void) {
   unsigned int exceptCode = getCAUSE() & CAUSE_EXCCODE_MASK;
   unsigned int intlineNo;
@@ -67,8 +72,47 @@ void deviceInterrupt(unsigned int intlineNo) {
   volatile memaddr devAddrBase =
       START_ADDR + ((intlineNo - 3) * 0x80) + (DevNo * 0x10);
   volatile memaddr *devAddrBase_ptr = (volatile memaddr *)devAddrBase;
-  unsigned int status = devAddrBase_ptr[STATUS];
-  devAddrBase_ptr[COMMAND] = ACK;
+  unsigned int status;
+  unsigned int semNum;
+  if (word != 4) {
+    // NON terminal
+    status = devAddrBase_ptr[STATUS];
+    devAddrBase_ptr[COMMAND] = ACK;
+    semNum = (intlineNo - 3) * 8 + DevNo;
+  } else {
+    // terminal
+    unsigned int tran_status = devAddrBase_ptr[TRANSTATUS];
+    unsigned int recv_status = devAddrBase_ptr[RECVSTATUS];
+    if (tran_status != READY && tran_status != BUSY &&
+        tran_status != UNINSTALLED) {
+      status = tran_status;
+      devAddrBase_ptr[TRANCOMMAND] = ACK;
+      semNum = 32 + DevNo;
+    } else if (recv_status != READY && recv_status != BUSY &&
+               recv_status != UNINSTALLED) {
+      status = recv_status;
+      devAddrBase_ptr[RECVCOMMAND] = ACK;
+      semNum = 32 + DevNo + 8;
+    }
+  }
+  int *semValue = (int *)&subDevice[semNum];
+  pcb_t *pcb = removeBlocked(semValue);
+  if (pcb) {
+    // perform a VERHOGEN
+    (*semValue)++;
+    pcb->p_s.reg_a0 = status;
+    insertProcQ(&readyQueue, pcb);
+    softBlockCount--;
+    // da blocked a ready
+    pcb->p_semAdd = NULL;
+  }
+
+  unsigned int cpuNum = getPRID();
+  if (currProc)
+    LDST(GET_EXCEPTION_STATE_PTR(cpuNum));
+  else
+    scheduler();
 }
+
 void PLTInterrupt(void) {}
 void ITInterrupt(void) {}
