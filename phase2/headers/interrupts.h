@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <uriscv/liburiscv.h>
 
-#define START_ADDR 0x100000054
+#define START_ADDR 0x10000054
 #define BITMAP_BASE 0x10000040
 volatile unsigned int *bitmap = (unsigned int *)BITMAP_BASE;
 void handleInterrupt(void);

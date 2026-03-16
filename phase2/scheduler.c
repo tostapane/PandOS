@@ -11,7 +11,8 @@ void scheduler(void) {
 
     // 3.2 Load 5 mills on the PLT [section 7.2].
     setTIMER(TIMESLICE);
-
+    // save the start time of the process
+    STCK(processTimer);
     // 3.3
     LDST(&currProc->p_s);
 

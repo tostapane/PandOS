@@ -23,6 +23,9 @@ unsigned int subDevice[NRSEMAPHORES];
 // semaphore to support the pseudo clock
 unsigned int pseudoClock;
 
+// variable to save the starting time of a process
+cpu_t processTimer;
+
 int main() {
 
   // 2.2
@@ -84,6 +87,7 @@ int main() {
   for (int i = 0; i < NRSEMAPHORES; i++)
     subDevice[i] = 0;
   pseudoClock = 0;
+  processCount = 0;
 
   // 2.5
   // load the system-wide Interval Timer with 100 milliseconds (constant

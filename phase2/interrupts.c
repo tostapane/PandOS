@@ -6,8 +6,7 @@
 #include <uriscv/types.h>
 /**
  * todo:
- * - rimuovere syscall da non timer
- *  -gestire errori
+ - gestire errori
  */
 void handleInterrupt(void) {
   unsigned int exceptCode = getCAUSE() & CAUSE_EXCCODE_MASK;
@@ -99,14 +98,13 @@ void deviceInterrupt(unsigned int intlineNo) {
   int *semValue = (int *)&subDevice[semNum];
   pcb_t *pcb = removeBlocked(semValue);
   if (pcb) {
-    // perform a VERHOGEN
-    (*semValue)++;
     pcb->p_s.reg_a0 = status;
     insertProcQ(&readyQueue, pcb);
     softBlockCount--;
     // da blocked a ready
     pcb->p_semAdd = NULL;
-  }
+  } else
+    (*semValue)++;
 
   unsigned int cpuNum = getPRID();
   if (currProc)
@@ -115,15 +113,34 @@ void deviceInterrupt(unsigned int intlineNo) {
     scheduler();
 }
 
+// gestione interrupt causati da process local timer
 void PLTInterrupt(void) {
   unsigned int cpuNum = getPRID();
   state_t *state = GET_EXCEPTION_STATE_PTR(cpuNum);
   currProc->p_s = *state;
-  setTIMER(1);
-  currProc->p_time = currProc->p_time + TIMESLICE;
+  cpu_t currTime;
+  STCK(currTime);
+  currProc->p_time = currProc->p_time + currTime - processTimer;
+  setTIMER(TIMESLICE);
   insertProcQ(&readyQueue, currProc);
   currProc = NULL;
   scheduler();
 }
 
-void ITInterrupt(void) {}
+void ITInterrupt(void) {
+  LDIT(PSECOND);
+  int *sem = (int *)&subDevice[48];
+  pcb_t *pcb;
+  while (headBlocked(sem)) {
+    pcb = removeBlocked(sem);
+    pcb->p_semAdd = NULL;
+    softBlockCount--;
+    insertProcQ(&readyQueue, pcb);
+  }
+  subDevice[48] = 0;
+  unsigned int cpuNum = getPRID();
+  if (currProc)
+    LDST(GET_EXCEPTION_STATE_PTR(cpuNum));
+  else
+    scheduler();
+}

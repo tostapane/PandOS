@@ -23,6 +23,9 @@ extern unsigned int subDevice[NRSEMAPHORES];
 // semaphore to support the pseudo clock
 extern unsigned int pseudoClock;
 
+// variable to save the starting time of a process
+extern cpu_t processTimer;
+
 extern void test(void);
 extern void uTLB_RefillHandler(void);
 extern void exceptionHandler(void);
