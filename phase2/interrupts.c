@@ -2,6 +2,7 @@
 #include "../../uriscv-latest/src/include/uriscv/cpu.h"
 #include "headers/initial.h"
 #include <uriscv/const.h>
+#include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
 /**
  * todo:
@@ -114,5 +115,15 @@ void deviceInterrupt(unsigned int intlineNo) {
     scheduler();
 }
 
-void PLTInterrupt(void) {}
+void PLTInterrupt(void) {
+  unsigned int cpuNum = getPRID();
+  state_t *state = GET_EXCEPTION_STATE_PTR(cpuNum);
+  currProc->p_s = *state;
+  setTIMER(1);
+  currProc->p_time = currProc->p_time + TIMESLICE;
+  insertProcQ(&readyQueue, currProc);
+  currProc = NULL;
+  scheduler();
+}
+
 void ITInterrupt(void) {}
