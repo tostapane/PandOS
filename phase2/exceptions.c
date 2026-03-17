@@ -1,4 +1,6 @@
 #include "headers/exceptions.h"
+#include "headers/initial.h"
+#include <uriscv/liburiscv.h>
 
 /**
  * SEZIONE 4: TLB-Refill
@@ -263,6 +265,7 @@ static void recursive_terminate(pcb_t *proc) {
   // Termina ricorsivamente tutti i figli
   while (!emptyChild(proc)) {
     recursive_terminate(removeChild(proc));
+    processCount--;
   }
 
   // Rimuove il processo da qualunque stato si trovi
@@ -315,6 +318,20 @@ static void recursive_terminate(pcb_t *proc) {
 // read section 5
 void programTrapHandler(void) {
   // Implementare la logica "Pass Up or Die" per Program Trap qui.
+  support_t *support = currProc->p_supportStruct;
+  if (support) {
+    unsigned int cpuNum = getPRID();
+    support->sup_exceptState[GENERALEXCEPT] =
+        *(GET_EXCEPTION_STATE_PTR(cpuNum));
+    context_t exeptCon = support->sup_exceptContext[GENERALEXCEPT];
+    LDCXT(exeptCon.stackPtr, exeptCon.status, exeptCon.pc);
+
+  } else {
+    recursive_terminate(currProc);
+    currProc = NULL;
+    processCount--;
+    scheduler();
+  }
 }
 
 /**
@@ -343,4 +360,18 @@ void programTrapHandler(void) {
 // read section 5
 void tlbHandler(void) {
   // Implementare la logica "Pass Up or Die" per TLB exception qui.
+  support_t *support = currProc->p_supportStruct;
+  if (support) {
+    unsigned int cpuNum = getPRID();
+    support->sup_exceptState[PGFAULTEXCEPT] =
+        *(GET_EXCEPTION_STATE_PTR(cpuNum));
+    context_t exeptCon = support->sup_exceptContext[PGFAULTEXCEPT];
+    LDCXT(exeptCon.stackPtr, exeptCon.status, exeptCon.pc);
+
+  } else {
+    recursive_terminate(currProc);
+    currProc = NULL;
+    processCount--;
+    scheduler();
+  }
 }
