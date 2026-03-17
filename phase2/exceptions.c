@@ -265,7 +265,6 @@ static void recursive_terminate(pcb_t *proc) {
   // Termina ricorsivamente tutti i figli
   while (!emptyChild(proc)) {
     recursive_terminate(removeChild(proc));
-    processCount--;
   }
 
   // Rimuove il processo da qualunque stato si trovi
@@ -328,8 +327,6 @@ void programTrapHandler(void) {
 
   } else {
     recursive_terminate(currProc);
-    currProc = NULL;
-    processCount--;
     scheduler();
   }
 }
