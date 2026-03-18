@@ -9,8 +9,7 @@
 
 #define START_ADDR 0x10000054
 #define BITMAP_BASE 0x10000040
-volatile unsigned int *bitmap = (unsigned int *)BITMAP_BASE;
-void handleInterrupt(void);
+void interruptHandler(void);
 
 // gestione non-timer interrupts
 void deviceInterrupt(unsigned int);

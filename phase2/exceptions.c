@@ -3,22 +3,6 @@
 #include <uriscv/liburiscv.h>
 
 /**
- * SEZIONE 4: TLB-Refill
- *
- * Gestore "placeholder" per gli eventi di TLB-Refill.
- *
- * Questa funzione è un gestore speciale che viene chiamato solo per eventi di
- * TLB-Refill. Per la Fase 2, il suo codice è fisso e fornito dalla
- * documentazione.
- */
-void uTLB_RefillHandler(void) {
-  setENTRYHI(0x80000000);
-  setENTRYLO(0x00000000);
-  TLBWR();
-  LDST((state_t *)BIOSDATAPAGE);
-}
-
-/**
  * SEZIONE 5: Exception Handling
  *
  * Punto di ingresso principale per la gestione di tutte le eccezioni.

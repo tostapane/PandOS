@@ -8,7 +8,10 @@
  * todo:
  - gestire errori
  */
-void handleInterrupt(void) {
+
+volatile unsigned int *bitmap = (unsigned int *)BITMAP_BASE;
+
+void interruptHandler(void) {
   unsigned int exceptCode = getCAUSE() & CAUSE_EXCCODE_MASK;
   unsigned int intlineNo;
   switch (exceptCode) {
