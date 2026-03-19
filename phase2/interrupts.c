@@ -44,7 +44,7 @@ void interruptHandler(void) {
     deviceInterrupt(intlineNo);
     break;
   default:
-    // errore
+    PANIC();
     break;
   }
 }
@@ -70,13 +70,13 @@ void deviceInterrupt(unsigned int intlineNo) {
   } else if (bitmap[word] & DEV7ON) {
     DevNo = 7;
   } else {
-    /*errore */
+    PANIC();
   }
   volatile memaddr devAddrBase =
       START_ADDR + ((intlineNo - 3) * 0x80) + (DevNo * 0x10);
   volatile memaddr *devAddrBase_ptr = (volatile memaddr *)devAddrBase;
   unsigned int status;
-  unsigned int semNum;
+  unsigned int semNum = -1;
   if (word != 4) {
     // NON terminal
     status = devAddrBase_ptr[STATUS];
@@ -98,6 +98,8 @@ void deviceInterrupt(unsigned int intlineNo) {
       semNum = 32 + DevNo + 8;
     }
   }
+  if (semNum == -1)
+    PANIC();
   int *semValue = (int *)&subDevice[semNum];
   pcb_t *pcb = removeBlocked(semValue);
   if (pcb) {

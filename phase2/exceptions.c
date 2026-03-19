@@ -311,6 +311,7 @@ void programTrapHandler(void) {
 
   } else {
     recursive_terminate(currProc);
+    currProc = NULL;
     scheduler();
   }
 }
@@ -352,7 +353,6 @@ void tlbHandler(void) {
   } else {
     recursive_terminate(currProc);
     currProc = NULL;
-    processCount--;
     scheduler();
   }
 }
