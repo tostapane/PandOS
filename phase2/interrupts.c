@@ -1,5 +1,5 @@
+#include "../uriscv/src/include/uriscv/cpu.h"
 #include "./headers/interrupts.h"
-#include "../../uriscv-latest/src/include/uriscv/cpu.h"
 #include "headers/initial.h"
 #include <uriscv/const.h>
 #include <uriscv/liburiscv.h>

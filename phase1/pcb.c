@@ -1,5 +1,8 @@
 #include "./headers/pcb.h"
 
+struct list_head pcbFree_h;
+pcb_t pcbFree_table[MAXPROC];
+
 /* Initialize the pcbFree list to contain all the elements of the
  * static array of MAXPROC PCBs. This method will be called only once during
  * data structure initialization. */

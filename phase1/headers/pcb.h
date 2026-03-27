@@ -49,7 +49,7 @@ pcb_t *removeChild(pcb_t *p);
 // Remove and return the PCB "p" from the parent's children list
 pcb_t *outChild(pcb_t *p);
 
-static struct list_head pcbFree_h;
-static pcb_t pcbFree_table[MAXPROC];
+extern struct list_head pcbFree_h;
+extern pcb_t pcbFree_table[MAXPROC];
 
 #endif

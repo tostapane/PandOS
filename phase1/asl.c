@@ -1,5 +1,9 @@
 #include "./headers/asl.h"
 
+semd_t semd_table[MAXPROC];
+struct list_head semdFree_h;
+struct list_head semd_h;
+
 /* Initialize the semdFree list to contain all the elements of the array static
  * semd_t semdTable[MAXPROC]. This method will be only called once during data
  * structure initialization. */

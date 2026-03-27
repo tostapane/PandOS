@@ -2,6 +2,15 @@
 #include "headers/initial.h"
 #include <uriscv/liburiscv.h>
 
+// Funzioni di supporto statiche per la gestione dei processi
+static pcb_t *find_pcb(int pid);
+static void recursive_terminate(pcb_t *proc);
+
+// TODO: implementare bene. messa solo per far compilare.
+void* memcpy(void *dest, const void *src, int n) {
+  return (void*)(0);
+}
+
 /**
  * SEZIONE 5: Exception Handling
  *
@@ -26,10 +35,6 @@
  *    - Tutti gli altri `ExcCode` (Program Traps): chiama
  * `programTrapHandler()`.
  */
-
-// TODO: da rimuovere una volta implementata la funzione in interrupts.c
-extern void interruptHandler();
-
 void exceptionHandler(void) {
   // id del processore che ha causato l'eccezione
   unsigned int procsrID = getPRID();
@@ -93,10 +98,6 @@ void exceptionHandler(void) {
  * incrementato il PC), aggiorna il tempo di CPU, esegui l'azione bloccante e
  * chiama lo `scheduler()`.
  */
-// Funzioni di supporto statiche per la gestione dei processi
-static pcb_t *find_pcb(int pid);
-static void recursive_terminate(pcb_t *proc);
-
 void syscallHandler(void) {
   // Puntatore allo stato del processore al momento dell'eccezione
   // TODO: an3dd:
@@ -151,7 +152,8 @@ void syscallHandler(void) {
     } else {
       state_t *new_state = (state_t *)exception_state->reg_a1;
       new_proc->p_s = *new_state;
-      new_proc->p_supportStruct = (support_t *)exception_state->reg_a2;
+      new_proc->p_prio = exception_state->reg_a2;
+      new_proc->p_supportStruct = (support_t *)exception_state->reg_a3;
       new_proc->p_time = 0;
       new_proc->p_semAdd = NULL;
 
@@ -224,52 +226,79 @@ void syscallHandler(void) {
   }
 }
 
-// TODO: sicuramente da spostare alla parte della fase 1 perché implementa
-// funzioni del livello precedente
 /**
- * @brief Trova un PCB nella pcbFree list dato un PID.
+ * @brief Funzione ricorsiva per cercare un PCB dato un PID, partendo da una radice.
+ * @param root Il PCB da cui iniziare la ricerca (tipicamente la radice dell'albero).
  * @param pid Il Process ID da cercare.
  * @return Puntatore al PCB se trovato, altrimenti NULL.
  */
-static pcb_t *find_pcb(int pid) {
+static pcb_t *find_pcb_recursive(pcb_t *root, int pid) {
+  if (root == NULL) return NULL;
+  if (root->p_pid == pid) return root;
+  pcb_t *found = NULL;
   struct list_head *pos;
-  list_for_each(pos, &pcbFree_h) {
-    pcb_t *p = container_of(pos, pcb_t, p_list);
-    if (p->p_pid == pid) {
-      return p;
-    }
+  // Esplora i figli ricorsivamente
+  list_for_each(pos, &root->p_child) {
+    pcb_t *child = container_of(pos, pcb_t, p_sib);
+    found = find_pcb_recursive(child, pid);
+    if (found) return found;
   }
   return NULL;
 }
 
 /**
+ * @brief Trova un PCB nella pcbFree list dato un PID, partendo da currProc.
+ * @param pid Il Process ID da cercare.
+ * @return Puntatore al PCB se trovato, altrimenti NULL.
+ */
+static pcb_t *find_pcb(int pid) {
+  // 1. Trova la radice dell'albero partendo da currProc (che è sempre parte dell'albero)
+  pcb_t *root = currProc;
+  while (root->p_parent != NULL) root = root->p_parent;
+  // 2. Cerca nel sistema partendo dalla radice
+  return find_pcb_recursive(root, pid);
+}
+
+/**
  * @brief Termina ricorsivamente un processo e i suoi figli (Sezione 10).
+ * 
+ * @param proc Il PCB del processo da terminare.
  */
 static void recursive_terminate(pcb_t *proc) {
-  // Termina ricorsivamente tutti i figli
+  if (proc == NULL) return;
+
+  // 1. Termina ricorsivamente tutti i figli
   while (!emptyChild(proc)) {
     recursive_terminate(removeChild(proc));
   }
 
-  // Rimuove il processo da qualunque stato si trovi
+  // 2. Scollega sempre dal genitore (safe anche se già rimosso da removeChild)
+  outChild(proc);
+
+  // 3. Rimuovi dallo stato di esecuzione
   if (proc == currProc) {
-    outChild(proc);
-  } else if (outProcQ(&readyQueue, proc) == NULL) {
-    pcb_t *unblocked = outBlocked(proc);
-    if (unblocked != NULL) { // Controlla se era bloccato su un semaforo di I/O
-      int *sem_addr = unblocked->p_semAdd;
-      if ((void *)sem_addr >= (void *)&subDevice[0] &&
-          (void *)sem_addr < (void *)&subDevice[SEMDEVLEN]) {
-        softBlockCount--;
+    // currProc non è in nessuna lista, basta non ricaricarlo (lo farà lo scheduler)
+    currProc = NULL;
+  } else {
+    // Prova a rimuoverlo dalla Ready Queue
+    if (outProcQ(&readyQueue, proc) == NULL) {
+      // Se non era in Ready, potrebbe essere bloccato
+      int *sem_addr = proc->p_semAdd; // Salva l'indirizzo PRIMA di outBlocked
+      if (outBlocked(proc) != NULL) {
+        // Se era un semaforo di device o pseudo-clock, aggiorna softBlockCount
+        if ((sem_addr >= (int *)&subDevice[0] && sem_addr < (int *)&subDevice[NRSEMAPHORES]) || 
+          sem_addr == (int *)&pseudoClock) {
+          softBlockCount--;
+        }
       }
     }
-  } else { // Se era sulla ready queue, outProcQ ha già fatto il suo lavoro
-    outChild(proc);
   }
 
+  // 4. Restituisci il PCB e aggiorna il conteggio totale
   freePcb(proc);
   processCount--;
 }
+
 
 /**
  * SEZIONE 8.2: Program Trap Exception Handling
