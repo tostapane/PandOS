@@ -178,10 +178,35 @@ void syscallHandler(void) {
     // La terminazione è sempre un'operazione che blocca il flusso normale
     // e richiede di chiamare lo scheduler.
     is_blocking = 1;
-    scheduler();
     break;
   }
 
+  //6.3: Passeren
+  case PASSEREN: {
+    (*((int *)exception_state->reg_a1))--;
+    if(*((int *)exception_state->reg_a1) < 0){
+      is_blocking = 1;
+      insertBlocked((int *)exception_state->reg_a1, currProc);
+    }
+    break;
+  }
+
+  //6.4: Verhogen
+  case VERHOGEN: {
+    (*((int *)exception_state->reg_a1))++;
+    if(*((int *)exception_state->reg_a1) <= 0){
+      pcb_t *p = removeBlocked((int *)exception_state->reg_a1);
+      if(p!=NULL) insertProcQ(&readyQueue, p);
+    }
+    break;
+  }
+
+  //6.5: DoIO
+
+  //6.6: GetCPUTime
+
+  //6.7: WaitForClock
+  
   // 6.8: GetSupportData
   case GETSUPPORTPTR: {
     exception_state->reg_a0 = (unsigned int)currProc->p_supportStruct;
@@ -206,7 +231,6 @@ void syscallHandler(void) {
     // Rimette il processo in coda
     insertProcQ(&readyQueue, currProc);
     is_blocking = 1;
-    scheduler();
     break;
   }
 
@@ -223,6 +247,14 @@ void syscallHandler(void) {
   // 6.12: Ritorno da una SYSCALL non bloccante
   if (!is_blocking) { // Ricarica lo stato per riprendere l'esecuzione
     LDST(exception_state);
+  }else{ //6.13: ritorno da una SYSCALL bloccante
+    if (currProc != NULL) {
+      cpu_t currTime;
+      STCK(currTime);
+      currProc->p_time += currTime - processTimer;
+      currProc->p_s = *exception_state;
+    }
+    scheduler();
   }
 }
 
