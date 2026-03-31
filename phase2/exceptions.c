@@ -202,6 +202,24 @@ void syscallHandler(void) {
   }
 
   //6.5: DoIO
+  case DOIO: {
+    unsigned int cmd_addr = (unsigned int)exception_state->reg_a1;
+    *(unsigned int *)cmd_addr = (unsigned int)exception_state->reg_a2;
+    unsigned int dev_addr_base = cmd_addr & ~0xF;
+    unsigned int baseOffset = dev_addr_base - 0x10000054;
+    unsigned int index;
+    if (baseOffset >= 0x200) { //IntlineNo == 7
+      int cmdOffset = cmd_addr & 0xF;
+      int devNo = index & 0x7;
+      index = 28 + cmdOffset + devNo;
+    }else{ int index = baseOffset >> 4; }
+    int *sem_ptr = &subDevice[index];
+    (*sem_ptr)--;
+    insertBlocked(sem_ptr, currProc);
+    soft_block_count++;
+    is_blocking = 1;
+    break;
+  }
 
   //6.6: GetCPUTime
 
