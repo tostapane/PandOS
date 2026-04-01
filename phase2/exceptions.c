@@ -222,8 +222,24 @@ void syscallHandler(void) {
   }
 
   //6.6: GetCPUTime
+  case GETTIME: {
+    cpu_t curr_t;
+    STCK(curr_t);
+    cpu_t delta_t = curr_t - processTimer;
+    delta_t += currProc->p_time;
+    exception_state->reg_a0 = delta_t;
+    break;
+  }
 
   //6.7: WaitForClock
+  case CLOCKWAIT: {
+    int *sem_ptr = &pseudoClock;
+    (*sem_ptr)--;
+    insertBlocked(sem_ptr, currProc);
+    soft_block_count++;
+    is_blocking = 1;
+    break;
+  }
   
   // 6.8: GetSupportData
   case GETSUPPORTPTR: {
