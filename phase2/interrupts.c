@@ -112,10 +112,10 @@ void deviceInterrupt(unsigned int intlineNo) {
     (*semValue)++;
 
   unsigned int cpuNum = getPRID();
-  if (currProc)
-    LDST(GET_EXCEPTION_STATE_PTR(cpuNum));
-  else
-    scheduler();
+  if (currProc){
+     STCK(processTimer);
+     LDST(GET_EXCEPTION_STATE_PTR(cpuNum));
+  } else scheduler();
 }
 
 // gestione interrupt causati da process local timer
@@ -123,9 +123,6 @@ void PLTInterrupt(void) {
   unsigned int cpuNum = getPRID();
   state_t *state = GET_EXCEPTION_STATE_PTR(cpuNum);
   currProc->p_s = *state;
-  cpu_t currTime;
-  STCK(currTime);
-  currProc->p_time = currProc->p_time + currTime - processTimer;
   setTIMER(TIMESLICE);
   insertProcQ(&readyQueue, currProc);
   currProc = NULL;
@@ -142,10 +139,10 @@ void ITInterrupt(void) {
     softBlockCount--;
     insertProcQ(&readyQueue, pcb);
   }
-  subDevice[48] = 0;
+  pseudoClock = 0; // ERA subDevice[48] = 0
   unsigned int cpuNum = getPRID();
-  if (currProc)
+  if (currProc){
+    STCK(processTimer);
     LDST(GET_EXCEPTION_STATE_PTR(cpuNum));
-  else
-    scheduler();
+  } else scheduler();
 }

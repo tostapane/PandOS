@@ -23,7 +23,7 @@ extern int process_count;
  * (soft-blocked). Incrementato quando un processo si blocca su un semaforo di
  * device/timer, decrementato quando viene sbloccato o terminato.
  */
-extern int soft_block_count;
+extern int soft_block_count; 
 
 /**
  * @brief Coda dei processi pronti per essere eseguiti (in stato "ready").

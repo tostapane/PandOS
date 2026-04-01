@@ -6,9 +6,14 @@
 static pcb_t *find_pcb(int pid);
 static void recursive_terminate(pcb_t *proc);
 
-// TODO: implementare bene. messa solo per far compilare.
+// TODO da ricontrollare
 void* memcpy(void *dest, const void *src, int n) {
-  return (void*)(0);
+  char *d = (char*)dest;
+  const char *s = (const char*)src;
+  for (int i = 0; i < n; i++) {
+    d[i] = s[i];
+  }
+  return dest;
 }
 
 /**
@@ -36,6 +41,11 @@ void* memcpy(void *dest, const void *src, int n) {
  * `programTrapHandler()`.
  */
 void exceptionHandler(void) {
+  // salvataggio del tempo di ingresso
+  cpu_t curr_time;
+  STCK(curr_time);
+  if(currProc != NULL) currProc->p_time += (curr_time - processTimer);
+
   // id del processore che ha causato l'eccezione
   unsigned int procsrID = getPRID();
 
@@ -102,11 +112,11 @@ void syscallHandler(void) {
   // Puntatore allo stato del processore al momento dell'eccezione
   // TODO: an3dd:
   // assicurarsi che non sia meglio usare la funzione
-  // state_t *exceptionState = GET_EXCEPTION_STATE_PTR(procsrID);
+  // state_t *exceptionState = GET_EXCEPTION_STATE_PTR(procsrID); //FATTO
   // "You can use the GET_EXCEPTION_STATE_PTR(id) macro to access the
   // BIOS Data Page [Section 11] of the various CPUs."
   // read section 5
-  state_t *exception_state = (state_t *)BIOSDATAPAGE;
+  state_t *exception_state = GET_EXCEPTION_STATE_PTR(getPRID());
 
   // Estrae il numero della SYSCALL dal registro a0
   int syscall_number = exception_state->reg_a0;
@@ -205,29 +215,33 @@ void syscallHandler(void) {
   case DOIO: {
     unsigned int cmd_addr = (unsigned int)exception_state->reg_a1;
     *(unsigned int *)cmd_addr = (unsigned int)exception_state->reg_a2;
+    
+    // calcolo dell'indice del semaforo
     unsigned int dev_addr_base = cmd_addr & ~0xF;
     unsigned int baseOffset = dev_addr_base - 0x10000054;
     unsigned int index;
-    if (baseOffset >= 0x200) { //IntlineNo == 7
+
+    if (baseOffset >= 0x200) { //IntlineNo == 7 (Terminali)
       int cmdOffset = cmd_addr & 0xF;
-      int devNo = index & 0x7;
-      index = 28 + cmdOffset + devNo;
-    }else{ int index = baseOffset >> 4; }
+      int devNo = (baseOffset - 0x200) >> 4; 
+      
+      // trasmissione: cmdOffset = 12 ->  44 - 12 + devNo = 32 + devNo
+      // ricezione:  cmdOffset = 4 ->   44 - 4 + devNo  = 40 + devNo
+      index = 44 - cmdOffset + devNo;
+    } else { index = baseOffset >> 4; }
+
     int *sem_ptr = &subDevice[index];
     (*sem_ptr)--;
     insertBlocked(sem_ptr, currProc);
-    soft_block_count++;
+    softBlockCount++;
     is_blocking = 1;
     break;
   }
 
   //6.6: GetCPUTime
   case GETTIME: {
-    cpu_t curr_t;
-    STCK(curr_t);
-    cpu_t delta_t = curr_t - processTimer;
-    delta_t += currProc->p_time;
-    exception_state->reg_a0 = delta_t;
+    //gestione precedente del clock alla chiamata di exceptionHandler()
+    exception_state->reg_a0 = currProc->p_time;
     break;
   }
 
@@ -280,12 +294,10 @@ void syscallHandler(void) {
 
   // 6.12: Ritorno da una SYSCALL non bloccante
   if (!is_blocking) { // Ricarica lo stato per riprendere l'esecuzione
+    STCK(processTimer);
     LDST(exception_state);
   }else{ //6.13: ritorno da una SYSCALL bloccante
     if (currProc != NULL) {
-      cpu_t currTime;
-      STCK(currTime);
-      currProc->p_time += currTime - processTimer;
       currProc->p_s = *exception_state;
     }
     scheduler();
@@ -402,6 +414,7 @@ void programTrapHandler(void) {
     support->sup_exceptState[GENERALEXCEPT] =
         *(GET_EXCEPTION_STATE_PTR(cpuNum));
     context_t exeptCon = support->sup_exceptContext[GENERALEXCEPT];
+    STCK(processTimer);
     LDCXT(exeptCon.stackPtr, exeptCon.status, exeptCon.pc);
 
   } else {
@@ -443,6 +456,7 @@ void tlbHandler(void) {
     support->sup_exceptState[PGFAULTEXCEPT] =
         *(GET_EXCEPTION_STATE_PTR(cpuNum));
     context_t exeptCon = support->sup_exceptContext[PGFAULTEXCEPT];
+    STCK(processTimer);
     LDCXT(exeptCon.stackPtr, exeptCon.status, exeptCon.pc);
 
   } else {
