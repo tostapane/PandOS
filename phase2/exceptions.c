@@ -7,9 +7,9 @@ static pcb_t *find_pcb(int pid);
 static void recursive_terminate(pcb_t *proc);
 
 // TODO da ricontrollare
-void* memcpy(void *dest, const void *src, int n) {
-  char *d = (char*)dest;
-  const char *s = (const char*)src;
+void *memcpy(void *dest, const void *src, int n) {
+  char *d = (char *)dest;
+  const char *s = (const char *)src;
   for (int i = 0; i < n; i++) {
     d[i] = s[i];
   }
@@ -44,7 +44,8 @@ void exceptionHandler(void) {
   // salvataggio del tempo di ingresso
   cpu_t curr_time;
   STCK(curr_time);
-  if(currProc != NULL) currProc->p_time += (curr_time - processTimer);
+  if (currProc != NULL)
+    currProc->p_time += (curr_time - processTimer);
 
   // id del processore che ha causato l'eccezione
   unsigned int procsrID = getPRID();
@@ -191,44 +192,47 @@ void syscallHandler(void) {
     break;
   }
 
-  //6.3: Passeren
+  // 6.3: Passeren
   case PASSEREN: {
     (*((int *)exception_state->reg_a1))--;
-    if(*((int *)exception_state->reg_a1) < 0){
+    if (*((int *)exception_state->reg_a1) < 0) {
       is_blocking = 1;
       insertBlocked((int *)exception_state->reg_a1, currProc);
     }
     break;
   }
 
-  //6.4: Verhogen
+  // 6.4: Verhogen
   case VERHOGEN: {
     (*((int *)exception_state->reg_a1))++;
-    if(*((int *)exception_state->reg_a1) <= 0){
+    if (*((int *)exception_state->reg_a1) <= 0) {
       pcb_t *p = removeBlocked((int *)exception_state->reg_a1);
-      if(p!=NULL) insertProcQ(&readyQueue, p);
+      if (p != NULL)
+        insertProcQ(&readyQueue, p);
     }
     break;
   }
 
-  //6.5: DoIO
+  // 6.5: DoIO
   case DOIO: {
     unsigned int cmd_addr = (unsigned int)exception_state->reg_a1;
     *(unsigned int *)cmd_addr = (unsigned int)exception_state->reg_a2;
-    
+
     // calcolo dell'indice del semaforo
     unsigned int dev_addr_base = cmd_addr & ~0xF;
     unsigned int baseOffset = dev_addr_base - 0x10000054;
     unsigned int index;
 
-    if (baseOffset >= 0x200) { //IntlineNo == 7 (Terminali)
+    if (baseOffset >= 0x200) { // IntlineNo == 7 (Terminali)
       int cmdOffset = cmd_addr & 0xF;
-      int devNo = (baseOffset - 0x200) >> 4; 
-      
+      int devNo = (baseOffset - 0x200) >> 4;
+
       // trasmissione: cmdOffset = 12 ->  44 - 12 + devNo = 32 + devNo
       // ricezione:  cmdOffset = 4 ->   44 - 4 + devNo  = 40 + devNo
       index = 44 - cmdOffset + devNo;
-    } else { index = baseOffset >> 4; }
+    } else {
+      index = baseOffset >> 4;
+    }
 
     int *sem_ptr = &subDevice[index];
     (*sem_ptr)--;
@@ -238,23 +242,23 @@ void syscallHandler(void) {
     break;
   }
 
-  //6.6: GetCPUTime
+  // 6.6: GetCPUTime
   case GETTIME: {
-    //gestione precedente del clock alla chiamata di exceptionHandler()
+    // gestione precedente del clock alla chiamata di exceptionHandler()
     exception_state->reg_a0 = currProc->p_time;
     break;
   }
 
-  //6.7: WaitForClock
+  // 6.7: WaitForClock
   case CLOCKWAIT: {
     int *sem_ptr = &pseudoClock;
     (*sem_ptr)--;
     insertBlocked(sem_ptr, currProc);
-    soft_block_count++;
+    softBlockCount++;
     is_blocking = 1;
     break;
   }
-  
+
   // 6.8: GetSupportData
   case GETSUPPORTPTR: {
     exception_state->reg_a0 = (unsigned int)currProc->p_supportStruct;
@@ -296,7 +300,7 @@ void syscallHandler(void) {
   if (!is_blocking) { // Ricarica lo stato per riprendere l'esecuzione
     STCK(processTimer);
     LDST(exception_state);
-  }else{ //6.13: ritorno da una SYSCALL bloccante
+  } else { // 6.13: ritorno da una SYSCALL bloccante
     if (currProc != NULL) {
       currProc->p_s = *exception_state;
     }
@@ -305,21 +309,26 @@ void syscallHandler(void) {
 }
 
 /**
- * @brief Funzione ricorsiva per cercare un PCB dato un PID, partendo da una radice.
- * @param root Il PCB da cui iniziare la ricerca (tipicamente la radice dell'albero).
+ * @brief Funzione ricorsiva per cercare un PCB dato un PID, partendo da una
+ * radice.
+ * @param root Il PCB da cui iniziare la ricerca (tipicamente la radice
+ * dell'albero).
  * @param pid Il Process ID da cercare.
  * @return Puntatore al PCB se trovato, altrimenti NULL.
  */
 static pcb_t *find_pcb_recursive(pcb_t *root, int pid) {
-  if (root == NULL) return NULL;
-  if (root->p_pid == pid) return root;
+  if (root == NULL)
+    return NULL;
+  if (root->p_pid == pid)
+    return root;
   pcb_t *found = NULL;
   struct list_head *pos;
   // Esplora i figli ricorsivamente
   list_for_each(pos, &root->p_child) {
     pcb_t *child = container_of(pos, pcb_t, p_sib);
     found = find_pcb_recursive(child, pid);
-    if (found) return found;
+    if (found)
+      return found;
   }
   return NULL;
 }
@@ -330,20 +339,23 @@ static pcb_t *find_pcb_recursive(pcb_t *root, int pid) {
  * @return Puntatore al PCB se trovato, altrimenti NULL.
  */
 static pcb_t *find_pcb(int pid) {
-  // 1. Trova la radice dell'albero partendo da currProc (che è sempre parte dell'albero)
+  // 1. Trova la radice dell'albero partendo da currProc (che è sempre parte
+  // dell'albero)
   pcb_t *root = currProc;
-  while (root->p_parent != NULL) root = root->p_parent;
+  while (root->p_parent != NULL)
+    root = root->p_parent;
   // 2. Cerca nel sistema partendo dalla radice
   return find_pcb_recursive(root, pid);
 }
 
 /**
  * @brief Termina ricorsivamente un processo e i suoi figli (Sezione 10).
- * 
+ *
  * @param proc Il PCB del processo da terminare.
  */
 static void recursive_terminate(pcb_t *proc) {
-  if (proc == NULL) return;
+  if (proc == NULL)
+    return;
 
   // 1. Termina ricorsivamente tutti i figli
   while (!emptyChild(proc)) {
@@ -355,7 +367,8 @@ static void recursive_terminate(pcb_t *proc) {
 
   // 3. Rimuovi dallo stato di esecuzione
   if (proc == currProc) {
-    // currProc non è in nessuna lista, basta non ricaricarlo (lo farà lo scheduler)
+    // currProc non è in nessuna lista, basta non ricaricarlo (lo farà lo
+    // scheduler)
     currProc = NULL;
   } else {
     // Prova a rimuoverlo dalla Ready Queue
@@ -364,8 +377,9 @@ static void recursive_terminate(pcb_t *proc) {
       int *sem_addr = proc->p_semAdd; // Salva l'indirizzo PRIMA di outBlocked
       if (outBlocked(proc) != NULL) {
         // Se era un semaforo di device o pseudo-clock, aggiorna softBlockCount
-        if ((sem_addr >= (int *)&subDevice[0] && sem_addr < (int *)&subDevice[NRSEMAPHORES]) || 
-          sem_addr == (int *)&pseudoClock) {
+        if ((sem_addr >= (int *)&subDevice[0] &&
+             sem_addr < (int *)&subDevice[NRSEMAPHORES]) ||
+            sem_addr == (int *)&pseudoClock) {
           softBlockCount--;
         }
       }
@@ -376,7 +390,6 @@ static void recursive_terminate(pcb_t *proc) {
   freePcb(proc);
   processCount--;
 }
-
 
 /**
  * SEZIONE 8.2: Program Trap Exception Handling
