@@ -1,7 +1,7 @@
 #include "headers/exceptions.h"
+#include "../debug_print.h"
 #include "headers/initial.h"
 #include <uriscv/liburiscv.h>
-
 // Funzioni di supporto statiche per la gestione dei processi
 static pcb_t *find_pcb(int pid);
 static void recursive_terminate(pcb_t *proc);
@@ -42,6 +42,7 @@ void *memcpy(void *dest, const void *src, int n) {
  */
 void exceptionHandler(void) {
   // salvataggio del tempo di ingresso
+  debug_print("Exception handler \n");
   cpu_t curr_time;
   STCK(curr_time);
   if (currProc != NULL)
@@ -194,44 +195,62 @@ void syscallHandler(void) {
 
   // 6.3: Passeren
   case PASSEREN: {
-    (*((int *)exception_state->reg_a1))--;
-    if (*((int *)exception_state->reg_a1) < 0) {
+    unsigned int *sem = (unsigned int *)exception_state->reg_a1;
+    if (sem == 0) {
       is_blocking = 1;
-      insertBlocked((int *)exception_state->reg_a1, currProc);
+      insertBlocked(sem, currProc);
+    } else {
+      (*sem)--;
     }
     break;
   }
-
   // 6.4: Verhogen
   case VERHOGEN: {
-    (*((int *)exception_state->reg_a1))++;
-    if (*((int *)exception_state->reg_a1) <= 0) {
-      pcb_t *p = removeBlocked((int *)exception_state->reg_a1);
+
+    unsigned int *sem = (unsigned int *)exception_state->reg_a1;
+    if (sem == 0) {
+      pcb_t *p = removeBlocked(sem);
       if (p != NULL)
         insertProcQ(&readyQueue, p);
+    } else {
+      (*sem)++;
     }
     break;
   }
 
-  // 6.5: DoIO
+    // 6.5: DoIO
+
   case DOIO: {
     unsigned int cmd_addr = (unsigned int)exception_state->reg_a1;
     *(unsigned int *)cmd_addr = (unsigned int)exception_state->reg_a2;
 
-    // calcolo dell'indice del semaforo
-    unsigned int dev_addr_base = cmd_addr & ~0xF;
-    unsigned int baseOffset = dev_addr_base - 0x10000054;
+    // 1. Distanza esatta in byte dalla base di tutti i dispositivi hardware
+    unsigned int total_offset = cmd_addr - 0x10000054;
+
+    // 2. Ogni registro è grande 0x10 (16) byte.
+    // Dividendo, otteniamo l'indice del dispositivo come se fosse un array
+    // unico da 0 a 47.
+    unsigned int flat_device_index = total_offset / 0x10;
     unsigned int index;
 
-    if (baseOffset >= 0x200) { // IntlineNo == 7 (Terminali)
-      int cmdOffset = cmd_addr & 0xF;
-      int devNo = (baseOffset - 0x200) >> 4;
-
-      // trasmissione: cmdOffset = 12 ->  44 - 12 + devNo = 32 + devNo
-      // ricezione:  cmdOffset = 4 ->   44 - 4 + devNo  = 40 + devNo
-      index = 44 - cmdOffset + devNo;
+    if (flat_device_index < 32) {
+      // Dispositivi normali (Disk, Flash, Net, Printer) occupano i primi 32
+      // posti
+      index = flat_device_index;
     } else {
-      index = baseOffset >> 4;
+      // Terminali (gli indici piatti vanno da 32 a 39).
+      // Essendo due sotto-dispositivi, dobbiamo capire se è trasmissione o
+      // ricezione.
+      unsigned int devNo = flat_device_index - 32;
+
+      // Il resto della divisione ci dà l'offset del registro specifico
+      unsigned int remainder = total_offset % 0x10;
+
+      if (remainder == 0x0C) { // Offset Comando Trasmissione
+        index = 32 + devNo;
+      } else { // Offset Comando Ricezione
+        index = 40 + devNo;
+      }
     }
 
     int *sem_ptr = &subDevice[index];
