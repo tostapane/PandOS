@@ -4,6 +4,14 @@
 #include <uriscv/liburiscv.h>
 
 /**
+ * @brief Gestore "placeholder" per gli eventi di TLB-Refill.
+ *
+ * Questa funzione è un gestore speciale che viene chiamato solo per eventi di
+ * TLB-Refill. Per la Fase 2, il suo codice è fisso.
+ */
+extern void uTLB_RefillHandler(void);
+
+/**
  * @brief Copia un blocco di memoria da una sorgente a una destinazione.
  *
  * @param dest Puntatore alla destinazione della copia.
@@ -22,15 +30,15 @@ void *memcpy(void *dest, const void *src, unsigned int n)
   return dest;
 }
 
-/* TLB-Refill Handler */
-/* One can place debug calls here, but not calls to print */
-void uTLB_RefillHandler()
-{
-  setENTRYHI(0x80000000);
-  setENTRYLO(0x00000000);
-  TLBWR();
-  LDST((state_t *)BIOSDATAPAGE);
-}
+// La funzione è dichiarata extern in initial.c,
+// tuttavia è definito in p2test.c
+// void uTLB_RefillHandler()
+// {
+//   setENTRYHI(0x80000000);
+//   setENTRYLO(0x00000000);
+//   TLBWR();
+//   LDST((state_t *)BIOSDATAPAGE);
+// }
 
 /**
  * @brief Funzione ricorsiva per cercare un PCB dato un PID, partendo da una

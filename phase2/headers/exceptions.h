@@ -46,14 +46,6 @@ void programTrapHandler(void);
 void tlbHandler(void);
 
 /**
- * @brief Gestore "placeholder" per gli eventi di TLB-Refill.
- *
- * Questa funzione è un gestore speciale che viene chiamato solo per eventi di
- * TLB-Refill. Per la Fase 2, il suo codice è fisso.
- */
-void uTLB_RefillHandler(void);
-
-/**
  * @brief Copia un blocco di memoria da una sorgente a una destinazione.
  *
  * @param dest Puntatore alla destinazione della copia.
