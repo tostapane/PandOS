@@ -14,7 +14,7 @@ The project follows the strict directory structure required for the assignment:
     * `initial.c`: System initialization and first process bootstrapping.
     * `scheduler.c`: Preemptive round-robin scheduler.
     * `interrupts.c`: Interrupt handler for devices and timers.
-    * `exceptions.c`: Exception dispatcher, SYSCALL handler, and TLB-Refill.
+    * `exceptions.c`: Exception dispatcher, SYSCALL handler, tree-hierarchy tools.
     * `p2test.c`: Main test suite for Phase 2.
     * `headers/`: Phase-specific headers (`initial.h`, `scheduler.h`, `interrupts.h`, `exceptions.h`).
 

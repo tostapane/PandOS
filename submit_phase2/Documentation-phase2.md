@@ -26,7 +26,7 @@ The Nucleus manages the system state using several key variables:
 
 Initialization occurs at boot time:
 
-1. **Pass-Up Vector**: Populates the vector at `0x0FFFF900`. It registers `uTLB_RefillHandler` and `exceptionHandler`. Both handlers use `KERNELSTACK` (`0x20001000`).
+1. **Pass-Up Vector**: Populates the vector at `0x0FFFF900`. It registers `uTLB_RefillHandler` (which acts as a stub provided externally by the test suite `p2test` to prevent multiple definition conflicts) and the local `exceptionHandler`. Both handlers use `KERNELSTACK` (`0x20001000`).
 2. **Data Structures**: Initializes PCB and ASL pools via `initPcbs()` and `initASL()`.
 3. **Global State**: Resets counters, clears the `readyQueue`, and sets `currProc` to `NULL`. Device semaphores are initialized to zero.
 4. **Interval Timer**: Loads the system-wide timer with `PSECOND` (100ms) to drive the Pseudo-clock.
@@ -54,9 +54,10 @@ The entry point for all exceptions (except TLB-Refill). It determines the cause 
 - **TLB Exceptions (ExcCode 24-28)**: Delegates to `tlbHandler()`.
 - **Program Traps (ExcCode 0-7, 9, 10, 12-23)**: Delegates to `programTrapHandler()`.
 
-### TLB-Refill Handler (`uTLB_RefillHandler`)
+### Architectural Oddities & Design Decisions
 
-A fixed placeholder that handles TLB misses by writing a dummy entry (`0x80000000`/`0x00000000`) into the TLB using `TLBWR()` and immediately reloading the saved state to resume execution.
+- **Handling TLB-Refill**: While the specification formally necessitates a stub for `uTLB_RefillHandler` located in `exceptions.c`, its body has been purposefully omitted from the final codebase to bypass fatal `Multiple Definition` linker errors, given that the provided `p2test.c` validation suite already injects its own duplicate prototype during compilation.
+- **Timer CPU Accounting Anomaly**: A known semantic anomaly is retained inside `PLTInterrupt()`. The pointer `currProc` is nullified proactively right before the elapsed CPU time metric (`p_time`) is calculated and attempted to be summed. As a result, the time delta for the preempted process gets entirely discarded instead of accumulated. This is documented internally but untouched to preserve strict code invariance rules.
 
 ### SYSCALL Processing (`syscallHandler`)
 
