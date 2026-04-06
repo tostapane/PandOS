@@ -505,43 +505,23 @@ void syscallHandler(void)
     break;
   }
 
-    // Il processo cede un quantitativo volontario di controllo ritornando
-    // passivamente al fondo dello smistatore Round-Robin.
-    // 6.10: Yield (NSYS10)
+  // Il processo cede un quantitativo volontario di controllo ritornando
+  // passivamente al fondo dello smistatore Round-Robin.
+  // 6.10: Yield
   case YIELD:
   {
-    // 2. Se è l'unico processo, continua
-    if (emptyProcQ(&readyQueue))
-    {
-      // "If is the only ready process, it is executed."
-      // Disattiva il blocking flag per non far intervenire lo scheduler
-      is_blocking = 0;
-
-      // Puoi opzionalmente fare il load qui, o lasciare che l'handler termini
-      // e faccia il load in coda.
-      break;
-    }
-
-    // 3. Ci sono altri processi. Dobbiamo forzare il cambio!
-    // Salva lo stato istantaneo del contesto esecutivo
+    // Salva lo stato corrente nel PCB
     currProc->p_s = *exception_state;
-
-    // A. Estrai FORZATAMENTE il prossimo in coda (che potrebbe avere priorità minore!)
-    pcb_t *nextProc = removeProcQ(&readyQueue);
-
-    // B. Ora che il posto del prossimo è "al sicuro", parcheggia il processo corrente
-    insertProcQ(&readyQueue, currProc);
-
-    // C. Aggiorna il puntatore globale e fai un Load State immediato (Context Switch)
-    currProc = nextProc;
-
-    // (Qui potresti dover gestire l'aggiornamento dei timer di processo, se previsti dalla specifica)
-
-    LDST(&currProc->p_s); // Esecuzione forzata, non ritornerà mai al fondo di questo switch
-
-    // is_blocking = 1; -> Non ci arrivi mai a leggerlo, ma semanticamente lo eviti.
+    
+    /* Per specifica, il processo che fa yield NON deve essere ri-eseguito
+     * immediatamente se ci sono altri processi in readyQueue, anche se ha la
+     * priorità massima. Per garantirlo, lo mettiamo in fondo alla lista. */
+    list_add_tail(&currProc->p_list, &readyQueue);
+    
+    is_blocking = 1;
     break;
   }
+
   // SYSCALL non di competenza o non valide
   default:
   { // 6.11: Tratta le SYSCALL non esistenti come Program Trap, stessa
