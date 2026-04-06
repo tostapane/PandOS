@@ -39,31 +39,14 @@ int main() {
   // miss.
   passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
 
-  /* Assegnazione di un area di memoria sicura e privata (dedicata al KERNEL)
-   * contenente lo stack dedicato alla gestione del TLB-Refill.
-   * Quando avviene un TLB miss, la funzione viene eseguita all'interno di
-   * questa area di memoria. Questo stack è come un'area di lavoro. I processi
-   * normali non possono ne leggere ne scrivere nel KERNELSTACK.
-   *
-   * Memoria utilizzata dalla funzione uTLB_RefillHandler sopra.*/
+  /* Stack kernel isolato e protetto, riservato all'esecuzione di uTLB_RefillHandler. */
   passupvector->tlb_refill_stackPtr = (memaddr)KERNELSTACK;
 
   /* Indirizzo della funzione che deve gestire eccezioni di altro tipo. */
   passupvector->exception_handler = (memaddr)exceptionHandler;
 
-  /* uTLB_RefillHandler e exceptionHandler usano la stessa area di memoria.
-   * Ovviamente questa area viene acceduta in mutua esclusione; quando la CPU
-   * sta gestendo un TLB-miss, le interruzioni sono disabilitate (non possono
-   * verificarsi eccezioni di altro tipo).
-   * In particolare durante la gestione di una eccezione:
-   * - Le interruzioni (esterne al kernel), vengono "prenotate" e gestite al
-   * termine dell'eccezione.
-   * - Le eccezioni (interne al kernel), sono errori fatali che causano il crash
-   * del sistema. Si assume che non avvengano errori fatali all'interno del
-   * kernel. Esso non è progettato per gestire una eccezione dentro l'altra
-   * tutte sullo stesso stack. Sollevare una eccezione (interna) comporterebbe
-   * richiamare una funzione che utilizza lo stesso stack che stiamo usando al
-   * momento, sovrascrivendolo!!*/
+  /* KERNELSTACK condiviso con exceptionHandler. Sicuro via interruzioni disabilitate. 
+   * Eccezioni kernel annidate non sono supportate (corromperebbero lo stack). */
   passupvector->exception_stackPtr = (memaddr)KERNELSTACK;
 
   // Inizializza la coda dei pcb

@@ -74,12 +74,6 @@ void interruptHandler(void) {
 /**
  * @brief Risolve l'Interrupt pendente per uno specifico livello periferico (da
  * linea 3 a 7).
- *
- * Utilizza una mappa hardware per sondare quale tra gli 8 dispositivi associati
- * a quella linea è scattato, decifra in memoria il suo registro dati e
- * ripristina in coda gli eventuali processi sospesi all'attesa del segnale in
- * questione.
- *
  * @param intlineNo L'indice in memoria del canale d'interrupt rilevato.
  */
 void deviceInterrupt(unsigned int intlineNo) {
