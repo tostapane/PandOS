@@ -1,6 +1,6 @@
 #include "./headers/initial.h"
-#include <uriscv/const.h>
-#include <uriscv/types.h>
+#include "../headers/const.h"
+#include "../headers/types.h"
 
 // Numero di processi avviati ma non ancora terminati
 unsigned int processCount;

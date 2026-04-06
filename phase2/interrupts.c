@@ -1,9 +1,9 @@
 #include "headers/interrupts.h"
 #include "headers/initial.h"
-#include <uriscv/const.h>
+#include "../headers/const.h"
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
-#include <uriscv/types.h>
+#include "../headers/types.h"
 
 // Indirizzo base della mappa di bit per gli Interrupt pendenti dei dispositivi
 volatile unsigned int *bitmap = (unsigned int *)BITMAP_BASE;

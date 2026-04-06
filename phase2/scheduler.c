@@ -1,6 +1,6 @@
 #include "./headers/scheduler.h"
 #include "headers/initial.h"
-#include <uriscv/const.h>
+#include "../headers/const.h"
 #include <uriscv/liburiscv.h>
 
 void scheduler(void) {
