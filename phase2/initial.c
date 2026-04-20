@@ -39,14 +39,16 @@ int main() {
   // miss.
   passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
 
-  /* Stack kernel isolato e protetto, riservato all'esecuzione di uTLB_RefillHandler. */
+  /* Stack kernel isolato e protetto, riservato all'esecuzione di
+   * uTLB_RefillHandler. */
   passupvector->tlb_refill_stackPtr = (memaddr)KERNELSTACK;
 
   /* Indirizzo della funzione che deve gestire eccezioni di altro tipo. */
   passupvector->exception_handler = (memaddr)exceptionHandler;
 
-  /* KERNELSTACK condiviso con exceptionHandler. Sicuro via interruzioni disabilitate. 
-   * Eccezioni kernel annidate non sono supportate (corromperebbero lo stack). */
+  /* KERNELSTACK condiviso con exceptionHandler. Sicuro via interruzioni
+   * disabilitate. Eccezioni kernel annidate non sono supportate
+   * (corromperebbero lo stack). */
   passupvector->exception_stackPtr = (memaddr)KERNELSTACK;
 
   // Inizializza la coda dei pcb
@@ -107,7 +109,7 @@ int main() {
   proc->p_parent = NULL;
 
   // Inizializza il tempo CPU accumulato a 0
-  proc->p_time = 0;
+  // proc->p_time = 0;
 
   // Il processo non è inizialmente bloccato in attesa di alcun semaforo
   proc->p_semAdd = NULL;
