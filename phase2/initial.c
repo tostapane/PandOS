@@ -102,19 +102,6 @@ int main() {
   // 'test'
   proc->p_s.pc_epc = (memaddr)test;
 
-  // Inizializza i campi dell'albero genealogico del processo a valori nulli o
-  // liste vuote
-  INIT_LIST_HEAD(&proc->p_child);
-  INIT_LIST_HEAD(&proc->p_sib);
-  proc->p_parent = NULL;
-
-  // Inizializza il tempo CPU accumulato a 0
-  // proc->p_time = 0;
-
-  // Il processo non è inizialmente bloccato in attesa di alcun semaforo
-  proc->p_semAdd = NULL;
-  proc->p_supportStruct = NULL;
-
   // L'avvio finale: chiama lo scheduler per passare il controllo alla CPU in
   // favore del primo processo
   scheduler();

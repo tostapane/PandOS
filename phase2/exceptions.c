@@ -244,11 +244,6 @@ void syscallHandler(void) {
       new_proc->p_prio = exception_state->reg_a2;
       new_proc->p_supportStruct = (support_t *)exception_state->reg_a3;
 
-      // Il processo nasce pulito: zero tempo CPU accumulato e non in attesa su
-      // alcun semaforo
-      // new_proc->p_time = 0;
-      new_proc->p_semAdd = NULL;
-
       // Inquadra il nuovo PCB nell'albero parentale sotto l'attuale processo
       // esecutivo
       insertChild(currProc, new_proc);
