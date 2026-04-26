@@ -343,9 +343,7 @@ void syscallHandler(void) {
 
   // 6.5: DoIO
   case DOIO: {
-
     unsigned int cmd_addr = (unsigned int)exception_state->reg_a1;
-    *(unsigned int *)cmd_addr = (unsigned int)exception_state->reg_a2;
 
     // 1. Distanza esatta in byte dalla base di tutti i dispositivi hardware
     unsigned int total_offset = cmd_addr - START_ADDR;
@@ -391,6 +389,9 @@ void syscallHandler(void) {
     // sincrone (I/O)
     softBlockCount++;
     is_blocking = 1; // Forza il blocco: verrà invocato lo scheduler
+
+    *(unsigned int *)cmd_addr = (unsigned int)exception_state->reg_a2;
+
     break;
   }
 
