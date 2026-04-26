@@ -1,9 +1,9 @@
 #include "headers/interrupts.h"
-#include "headers/initial.h"
 #include "../headers/const.h"
+#include "../headers/types.h"
+#include "headers/initial.h"
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
-#include "../headers/types.h"
 
 // Indirizzo base della mappa di bit per gli Interrupt pendenti dei dispositivi
 volatile unsigned int *bitmap = (unsigned int *)BITMAP_BASE;
@@ -207,7 +207,7 @@ void PLTInterrupt(void) {
   currProc->p_s = *state;
 
   // Ricarica il timer a 5 millisecondi (Time Slice)
-  setTIMER(TIMESLICE);
+  setTIMER(TIMESLICE * *((int *)TIMESCALEADDR));
 
   // Rimette il processo corrente alla coda di ready
   insertProcQ(&readyQueue, currProc);

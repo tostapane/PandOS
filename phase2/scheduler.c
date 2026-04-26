@@ -12,7 +12,7 @@ void scheduler(void) {
 
     // 3.2 Imposta il Process Local Timer (PLT) a 5 millisecondi [sezione 7.2].
     // Questo definisce il quanto di tempo concesso al processo.
-    setTIMER(TIMESLICE);
+    setTIMER(TIMESLICE * *((int *)TIMESCALEADDR));
 
     // Salva il tempo di inizio per calcolare in seguito quanto tempo di CPU
     // viene utilizzato dal processo
