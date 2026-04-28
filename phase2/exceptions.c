@@ -462,10 +462,7 @@ void syscallHandler(void) {
     // Salva lo stato corrente nel PCB
     currProc->p_s = *exception_state;
 
-    /* Per specifica, il processo che fa yield NON deve essere ri-eseguito
-     * immediatamente se ci sono altri processi in readyQueue, anche se ha la
-     * priorità massima. Per garantirlo, lo mettiamo in fondo alla lista. */
-    list_add_tail(&currProc->p_list, &readyQueue);
+    insertProcQ(&readyQueue, currProc);
 
     is_blocking = 1;
     break;

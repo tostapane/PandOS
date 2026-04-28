@@ -9,7 +9,7 @@
  */
 void initSwapStructs();
 
-/* * The Pager: The TLB exception handler. 
+/* * The Pager: The TLB exception handler.
  * This gets invoked when a process tries to access memory that isn't actually in RAM.
  */
 void Pager();
