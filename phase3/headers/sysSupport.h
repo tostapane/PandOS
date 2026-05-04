@@ -4,9 +4,11 @@
 #include "../../headers/const.h"
 #include "../../headers/types.h"
 
+#define START_ADDR 0x10000054
 #define READTERMINAL 5
 #define EXECUTE 6
 
+extern void Pager();
 /* The main entry point for non-TLB exceptions passed up by the Nucleus. */
 void GeneralExceptionHandler();
 

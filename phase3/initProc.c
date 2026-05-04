@@ -1,4 +1,5 @@
 #include "headers/initProc.h"
+#include "../headers/const.h"
 #include <uriscv/liburiscv.h>
 
 /* Global variables definition */
@@ -17,18 +18,15 @@ support_t supStructs[UPROCMAX];
 extern void Pager();
 extern void GeneralExceptionHandler();
 
-void test()
-{
+void test() {
   /* 1. Initialize the Swap Pool and its semaphore [cite: 291] */
   swapSemaphore = 1; /* Mutual exclusion, start at 1  */
-  for (int i = 0; i < POOLSIZE; i++)
-  {
+  for (int i = 0; i < POOLSIZE; i++) {
     swapPool[i].sw_asid = -1; /* -1 indicates unoccupied  */
   }
 
   /* 2. Initialize device semaphores [cite: 292] */
-  for (int i = 0; i < NSUPPSEM; i++)
-  {
+  for (int i = 0; i < NSUPPSEM; i++) {
     devSemaphores[i] = 1; /* Mutual exclusion for I/O [cite: 293] */
   }
 
@@ -65,8 +63,7 @@ void test()
       IEPON | IMON | TEBITON; /* Kernel mode, ints on [cite: 338] */
 
   /* Initialize the Page Table for the shell [cite: 331] */
-  for (int i = 0; i < MAXPAGES - 1; i++)
-  {
+  for (int i = 0; i < MAXPAGES - 1; i++) {
     /* VPN from 0x80000 to 0x8001E, ASID = 1 [cite: 80, 83] */
     shellSup->sup_privatePgTbl[i].pte_entryHI =
         ((0x80000 + i) << VPNSHIFT) | (1 << ASIDSHIFT);
