@@ -1,24 +1,9 @@
 #include "../headers/shell.h"
 #include "../headers/sysSupport.h"
+#include "../headers/utils.h"
 
 // array dei comandi/programmi disponibili
 command programs[] = {{"calc", 2}, {"test2", 3}, {"test3", 4}};
-
-int myStrlen(char *arg) {
-  int len = 0;
-  while (arg[len] != '\0' && arg[len] != '\n') {
-    len++;
-  }
-  return len;
-}
-
-int myStrcmp(char *s1, char *s2) {
-  while (*s1 && (*s1 == *s2)) {
-    s1++;
-    s2++;
-  }
-  return *(unsigned char *)s1 - *(unsigned char *)s2;
-}
 
 int main() {
   char prompt[12] = "PandOSsh>> ";

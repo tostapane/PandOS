@@ -14,12 +14,6 @@ typedef struct command {
 
 extern command programs[];
 
-// Ritorna la lunghezza di arg
-int myStrlen(char *arg);
-
-// Ritorna 0 se arg1 == arg2
-int myStrcmp(char *s1, char *s2);
-
 /* La shell stampa la riga "PandOSsh>> ", poi esegue la funzione SYSCALL
  * READTERMINAL, che permette all'utente di scrivere e blocca la shell finche
  * quest ultimo non preme invio.
