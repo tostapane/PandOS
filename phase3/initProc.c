@@ -20,72 +20,69 @@ support_t supStructs[UPROCMAX];
 extern void Pager();
 extern void GeneralExceptionHandler();
 
+// Instantiator Process
 void test() {
-  /* 1. Initialize the Swap Pool and its semaphore [cite: 291] */
-  swapSemaphore = 1; /* Mutual exclusion, start at 1  */
+  // Initialize the Swap Pool and its semaphore
+  swapSemaphore = 1; // Mutual exclusion, start at
   for (int i = 0; i < POOLSIZE; i++) {
-    swapPool[i].sw_asid = -1; /* -1 indicates unoccupied  */
+    swapPool[i].sw_asid = -1; // -1 == unoccupied
   }
 
-  /* 2. Initialize device semaphores [cite: 292] */
+  // Initialize device semaphores
   for (int i = 0; i < NSUPPSEM; i++) {
-    devSemaphores[i] = 1; /* Mutual exclusion for I/O [cite: 293] */
+    devSemaphores[i] = 1;
   }
 
-  /* 3. Initialize synchronization semaphores  */
+  // Initialize synchronization semaphores
   masterSemaphore = 0;
   shellSemaphore = 0;
 
   // contiene l'asid del processo che ha la mutua esclusione sulla page table
   pager_mutex_holder = -1;
 
-  /* 4. Prepare the initial processor state for the shell U-proc [cite: 314] */
+  // Prepare the initial processor state for the shell U-proc
   state_t shellState;
-  shellState.pc_epc = UPROCSTARTADDR; /* 0x8000.00B0 [cite: 316] */
-  shellState.reg_sp = USERSTACKTOP;   /* 0xC000.0000 [cite: 317] */
-  /* User-mode, interrupts enabled, local timer enabled [cite: 318] */
+  shellState.pc_epc = UPROCSTARTADDR; // 0x8000.00B0
+  shellState.reg_sp = USERSTACKTOP;   // 0xC000.0000
+  // User-mode, interrupts enabled, local timer enabled
   shellState.status = USERPON | IEPON | IMON | TEBITON;
-  /* Shell ASID is 1 (0 is for kernel daemons) [cite: 48, 319] */
+  // Shell ASID is 1 (0 is for kernel daemons)
   shellState.entry_hi = (1 << ASIDSHIFT);
 
-  /* 5. Initialize the Support Structure for the shell [cite: 321] */
+  // Initialize the Support Structure for the shell
   support_t *shellSup = &supStructs[0];
-  shellSup->sup_asid = 1; /* [cite: 327] */
+  // la shell ha asid 1
+  shellSup->sup_asid = 1;
 
-  /* Context 0: TLB Exception Handler (The Pager) [cite: 337] */
+  // Context 0: TLB Exception Handler (The Pager)
   shellSup->sup_exceptContext[0].pc = (memaddr)Pager;
   shellSup->sup_exceptContext[0].stackPtr =
-      (memaddr) &
-      (shellSup->sup_stackTLB[499]); /* Stacks grow down [cite: 340] */
-  shellSup->sup_exceptContext[0].status =
-      IEPON | IMON | TEBITON; /* Kernel mode, ints on [cite: 338] */
+      (memaddr) & (shellSup->sup_stackTLB[499]);
+  shellSup->sup_exceptContext[0].status = IEPON | IMON | TEBITON; // Kernel mode
 
   /* Context 1: General Exception Handler [cite: 337] */
   shellSup->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
   shellSup->sup_exceptContext[1].stackPtr =
       (memaddr) & (shellSup->sup_stackGen[499]);
-  shellSup->sup_exceptContext[1].status =
-      IEPON | IMON | TEBITON; /* Kernel mode, ints on [cite: 338] */
+  shellSup->sup_exceptContext[1].status = IEPON | IMON | TEBITON; // Kernel mode
 
-  /* Initialize the Page Table for the shell [cite: 331] */
+  // Initialize the Page Table for the shell
   for (int i = 0; i < MAXPAGES - 1; i++) {
-    /* VPN from 0x80000 to 0x8001E, ASID = 1 [cite: 80, 83] */
     shellSup->sup_privatePgTbl[i].pte_entryHI =
         ((0x80000 + i) << VPNSHIFT) | (1 << ASIDSHIFT);
-    /* V=0, D=1, G=0  */
     shellSup->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
   }
-  /* Stack page initialization [cite: 81] */
+  // Stack page initialization
   shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryHI =
       (0xBFFFF << VPNSHIFT) | (1 << ASIDSHIFT);
   shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
-  /* 6. Launch the shell process [cite: 305] */
-  SYSCALL(CREATEPROCESS, (unsigned int)&shellState, (unsigned int)shellSup, 0);
+  // Launch the shell process
+  SYSCALL(CREATEPROCESS, (unsigned int)&shellState, 1, (unsigned int)shellSup);
 
-  /* 7. Wait for the shell to terminate (Blocking P operation) [cite: 298] */
+  // Wait for the shell to terminate (Blocking P operation)
   SYSCALL(PASSEREN, (unsigned int)&masterSemaphore, 0, 0);
 
-  /* 8. Shell is dead, now kill yourself (SYS2) to trigger a HALT [cite: 300] */
+  // 8. Shell is dead, now kill yourself (SYS2) to trigger a HALT
   SYSCALL(TERMPROCESS, 0, 0, 0);
 }

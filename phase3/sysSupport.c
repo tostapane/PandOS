@@ -30,13 +30,12 @@ void GeneralExceptionHandler() {
 }
 
 void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
-  /* Retrieve the arguments from the saved state's registers.
-   * a0 = syscall number, a1-a3 = parameters[cite: 237, 238].
+  /* Retrieve the arguments from the saved state's registers
+   * a0 = syscall number, a1-a3 = parameters
    */
-  // e' giusto usare general except?
   unsigned int syscallNum = supStruct->sup_exceptState[GENERALEXCEPT].reg_a0;
 
-  /* CRITICAL: Increment PC by 4 to avoid an infinite loop! */
+  // Increment PC by 4
   supStruct->sup_exceptState[1].pc_epc += WORDLEN;
 
   switch (syscallNum) {
