@@ -1,8 +1,8 @@
 #ifndef INITPROC_H
 #define INITPROC_H
 
-#include "../../headers/types.h"
 #include "../../headers/const.h"
+#include "../../headers/types.h"
 
 /* Exported global data structures for Phase 3 [cite: 382] */
 extern swap_t swapPool[POOLSIZE];
@@ -10,6 +10,7 @@ extern int swapSemaphore;
 extern int masterSemaphore;
 extern int shellSemaphore;
 
+extern int page_mutex_holder;
 /* Array of semaphores for peripheral I/O devices [cite: 292] */
 extern int devSemaphores[NSUPPSEM];
 

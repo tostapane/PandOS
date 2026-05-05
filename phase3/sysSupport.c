@@ -5,11 +5,11 @@
 #include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
 
-/* Assuming you have swapSemaphore defined in initProc.c */
+/* Assuming you have swapSemaphore defined in initProc.c
 extern int swapSemaphore;
 extern int masterSemaphore;
 extern int shellSemaphore;
-
+*/
 void GeneralExceptionHandler() {
   /* 1. Get the current process's Support Structure via SYSCALL 8 */
   support_t *supStruct = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
@@ -104,8 +104,13 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     newState.reg_sp = USERSTACKTOP;
     newState.status = USERPON | IEPON | IMON | TEBITON;
     newState.entry_hi = asid << ASIDSHIFT;
+
     // inizializzo sup_struct del nuovo processo
     support_t *newSupport = &supStructs[asid - 1];
+
+    // asid
+    newSupport->sup_asid = asid;
+
     // tlb handler
     newSupport->sup_exceptContext[0].pc = (memaddr)Pager;
     newSupport->sup_exceptContext[0].stackPtr =
@@ -117,10 +122,21 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
         (memaddr) & (newSupport->sup_stackGen[499]);
     newSupport->sup_exceptContext[1].status = IEPON | IMON | TEBITON;
 
+    // private page table
+    for (int i = 0; i < 31; i++) {
+      newSupport->sup_privatePgTbl[i].pte_entryHI =
+          ((0x80000 + i) << VPNSHIFT) | (asid << ASIDSHIFT);
+      newSupport->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+    }
+    newSupport->sup_privatePgTbl[31].pte_entryHI =
+        (0xBFFFF << VPNSHIFT) | (asid << ASIDSHIFT);
+    newSupport->sup_privatePgTbl[31].pte_entryLO = DIRTYON;
+
     // creo il nuovo processo a priorita' 1
     SYSCALL(CREATEPROCESS, (unsigned int)&newState, 1,
             (unsigned int)newSupport);
 
+    // fermo la shell
     SYSCALL(PASSEREN, (unsigned int)&shellSemaphore, 0, 0);
 
     break;
@@ -137,37 +153,23 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
 }
 
 void ProgramTrapHandler(support_t *supStruct) {
-  /* * The process is going to die. We need to clean up its mess.
-   */
+  // The process is going to die. We need to clean up its mess.
 
-  /* 1. Did this idiot process die while holding the Swap Pool semaphore?
-   * If so, we MUST release it (V operation) before terminating,
-   * or the whole virtual memory system deadlocks.
-   */
-
-  /* Note: You need a way to track if THIS specific process holds the lock.
-   * A simple global boolean flag set in the Pager before the P operation
-   * and cleared after the V operation works wonders for Phase 3.
-   */
-  // if (process_holds_swap_mutex) {
-  //     SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
-  //     process_holds_swap_mutex = 0;
-  // }
-
-  /* 2. Signal the appropriate synchronization semaphore[cite: 245].
-   * If this is ASID 1 (the shell), we V the masterSemaphore to wake up
-   * `test`[cite: 245, 299]. If this is ASID > 1 (a child program), we V the
-   * shellSemaphore to wake up the shell[cite: 245, 304].
-   */
+  // controllo se ha la mutua esclusione sulla page table
+  if (page_mutex_holder == supStruct->sup_asid) {
+    page_mutex_holder = -1;
+    SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
+  }
+  // cerco il semaforo corretto
   if (supStruct->sup_asid == 1) {
+    /* When the shell terminates, either normally or abnormally, it should
+      perform a V on the masterSemaphore */
     SYSCALL(VERHOGEN, (unsigned int)&masterSemaphore, 0, 0);
   } else {
+    // se e' un figlio della shell, sveglia la shell
     SYSCALL(VERHOGEN, (unsigned int)&shellSemaphore, 0, 0);
   }
 
-  /* 3. Put it out of its misery via the Nucleus NSYS2 service[cite: 282, 300].
-   */
+  // termina il proceso
   SYSCALL(TERMPROCESS, 0, 0, 0);
-
-  /* We never reach this point. */
 }
