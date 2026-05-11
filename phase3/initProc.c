@@ -60,7 +60,7 @@ void test() {
       (memaddr) & (shellSup->sup_stackTLB[499]);
   shellSup->sup_exceptContext[0].status = IEPON | IMON | TEBITON; // Kernel mode
 
-  /* Context 1: General Exception Handler [cite: 337] */
+  /* Context 1: General Exception Handler */
   shellSup->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
   shellSup->sup_exceptContext[1].stackPtr =
       (memaddr) & (shellSup->sup_stackGen[499]);

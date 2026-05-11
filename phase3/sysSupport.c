@@ -15,7 +15,7 @@ void GeneralExceptionHandler() {
   support_t *supStruct = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
 
   /* 2. Determine the cause of the exception.
-   * Note: Non-TLB exceptions use context 1 (GENERALEXCEPT)[cite: 337].
+   * Note: Non-TLB exceptions use context 1 (GENERALEXCEPT).
    */
   unsigned int cause = supStruct->sup_exceptState[1].cause;
   unsigned int excCode = (cause & GETEXECCODE) >> CAUSESHIFT;
@@ -40,19 +40,50 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
 
   switch (syscallNum) {
   case TERMINATE: /* SYS2 (2) */
-    /* Treat an intentional termination exactly like a Program Trap[cite: 283].
+    /* Treat an intentional termination exactly like a Program Trap.
      */
     ProgramTrapHandler(supStruct);
     break;
 
-  case WRITETERMINAL: /* SYS4 (4) */
-    /* YOUR CODE HERE:
-     * Validate that the string in a1 and length in a2 are within the
-     * process's logical address space (kuseg)[cite: 256].
-     * If it's outside, or len < 0 or len > 128, call ProgramTrapHandler![cite:
-     * 256]. Otherwise, write it out character by character.
-     */
+  /* SYS4 (4) */
+  case WRITETERMINAL: {
+    char *addr = (char *)supStruct->sup_exceptState[GENERALEXCEPT].reg_a1;
+    int len = (int)supStruct->sup_exceptState[GENERALEXCEPT].reg_a2;
+
+    // Address is out of range (<0x80000000 or >0xC0000000)
+    if (len < 0 || len > 128 || (unsigned)addr < KUSEG ||
+        (unsigned)addr + len > USERSTACKTOP) {
+      ProgramTrapHandler(supStruct);
+      return;
+    }
+
+    // P operation
+    SYSCALL(PASSEREN, (int)&devSemaphores[40], 0, 0);
+
+    // Write char by char
+    volatile memaddr term0base = START_ADDR + (4 * 0x80) + (0 * 0x10);
+    volatile termreg_t *term_reg = (volatile termreg_t *)term0base;
+    unsigned commandAddr = (unsigned)&term_reg->transm_command;
+    int nsent = 0;
+    unsigned i;
+    for (i = 0; i < len; ++i) {
+      unsigned cmd = (addr[i] << 8) | TRANSMITCHAR;
+      int ioStatus = SYSCALL(DOIO, commandAddr, cmd, 0);
+      if ((ioStatus & 0xFF) != OKCHARTRANS) {
+        supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = -(ioStatus & 0xFF);
+        break;
+      }
+      nsent++;
+    }
+
+    if (nsent == len) {
+      supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = nsent;
+    }
+
+    // Release mutex
+    SYSCALL(VERHOGEN, (int)&devSemaphores[40], 0, 0);
     break;
+  }
 
   case READTERMINAL: {
     // seleziono il semaforo del terminal 0 in lettura
@@ -90,6 +121,7 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     SYSCALL(VERHOGEN, readMutex, 0, 0);
     break;
   }
+
   case EXECUTE: {
     if (supStruct->sup_asid != 1) {
       ProgramTrapHandler(supStruct);
