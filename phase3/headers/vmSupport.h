@@ -4,6 +4,10 @@
 #include "../../headers/types.h"
 #include "../../headers/const.h"
 
+#define EXC_TLBMOD 1
+#define INTLINE_DISK 3
+#define INTLINE_FLASH 4
+
 /* * The initialization function for the Swap Pool.
  * Your Instantiator Process MUST call this before launching any U-procs.
  */
