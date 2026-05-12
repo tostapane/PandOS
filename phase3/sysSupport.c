@@ -133,7 +133,7 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     state_t newState;
     newState.pc_epc = UPROCSTARTADDR;
     newState.reg_sp = USERSTACKTOP;
-    newState.status = USERPON | IEPON | IMON | TEBITON;
+    newState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
     newState.entry_hi = asid << ASIDSHIFT;
 
     // inizializzo sup_struct del nuovo processo
@@ -146,12 +146,12 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     newSupport->sup_exceptContext[0].pc = (memaddr)Pager;
     newSupport->sup_exceptContext[0].stackPtr =
         (memaddr) & (newSupport->sup_stackTLB[499]);
-    newSupport->sup_exceptContext[0].status = IEPON | IMON | TEBITON;
+    newSupport->sup_exceptContext[0].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     // general exception handler
     newSupport->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
     newSupport->sup_exceptContext[1].stackPtr =
         (memaddr) & (newSupport->sup_stackGen[499]);
-    newSupport->sup_exceptContext[1].status = IEPON | IMON | TEBITON;
+    newSupport->sup_exceptContext[1].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
 
     // private page table
     for (int i = 0; i < 31; i++) {

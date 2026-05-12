@@ -7,11 +7,11 @@
     "clock-rate": 1,
     "devices": {
         "flash0": {
-            "enabled": false,
+            "enabled": true,
             "file": "/home/ponziopilato/Universita/cosedue/sistemi/progetto/Progetto-Sistemi-Operativi/phase3/testers/shell.uriscv"
         },
         "flash1": {
-            "enabled": false,
+            "enabled": true,
             "file": "/home/ponziopilato/Universita/cosedue/sistemi/progetto/Progetto-Sistemi-Operativi/phase3/testers/calc.uriscv"
         },
         "terminal0": {
@@ -25,7 +25,7 @@
     },
     "execution-rom": "/usr/local/share/uriscv/exec.rom.uriscv",
     "num-processors": 1,
-    "num-ram-frames": 64,
+    "num-ram-frames": 128,
     "symbol-table": {
         "asid": 64,
         "file": "build/MultiPandOS.stab.uriscv"

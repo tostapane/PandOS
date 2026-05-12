@@ -45,7 +45,7 @@ void test() {
   shellState.pc_epc = UPROCSTARTADDR; // 0x8000.00B0
   shellState.reg_sp = USERSTACKTOP;   // 0xC000.0000
   // User-mode, interrupts enabled, local timer enabled
-  shellState.status = USERPON | IEPON | IMON | TEBITON;
+  shellState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
   // Shell ASID is 1 (0 is for kernel daemons)
   shellState.entry_hi = (1 << ASIDSHIFT);
 
@@ -58,13 +58,15 @@ void test() {
   shellSup->sup_exceptContext[0].pc = (memaddr)Pager;
   shellSup->sup_exceptContext[0].stackPtr =
       (memaddr) & (shellSup->sup_stackTLB[499]);
-  shellSup->sup_exceptContext[0].status = IEPON | IMON | TEBITON; // Kernel mode
+  shellSup->sup_exceptContext[0].status =
+      MSTATUS_MPIE_MASK | MSTATUS_MPP_M; // Kernel mode
 
   /* Context 1: General Exception Handler */
   shellSup->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
   shellSup->sup_exceptContext[1].stackPtr =
       (memaddr) & (shellSup->sup_stackGen[499]);
-  shellSup->sup_exceptContext[1].status = IEPON | IMON | TEBITON; // Kernel mode
+  shellSup->sup_exceptContext[1].status =
+      MSTATUS_MPIE_MASK | MSTATUS_MPP_M; // Kernel mode
 
   // Initialize the Page Table for the shell
   for (int i = 0; i < MAXPAGES - 1; i++) {
