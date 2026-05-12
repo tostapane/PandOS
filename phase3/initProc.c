@@ -7,7 +7,7 @@ swap_t swapPool[POOLSIZE];
 int swapSemaphore;
 int masterSemaphore;
 
-int pager_mutex_holder;
+int page_mutex_holder;
 
 // gestisce la concorrenza tra la shell e un suo processo figlio.
 // la shell rimarrà bloccata finche il processo figlio non termina.
@@ -38,7 +38,7 @@ void test() {
   shellSemaphore = 0;
 
   // contiene l'asid del processo che ha la mutua esclusione sulla page table
-  pager_mutex_holder = -1;
+  page_mutex_holder = -1;
 
   // Prepare the initial processor state for the shell U-proc
   state_t shellState;

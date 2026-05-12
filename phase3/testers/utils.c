@@ -33,3 +33,12 @@ void itoa(int n, char s[]) {
   // nullterm
   s[i++] = '\0';
 }
+
+void *memcpy(void *dest, const void *src, int n) {
+  char *d = (char *)dest;
+  const char *s = (const char *)src;
+  for (int i = 0; i < n; i++) {
+    d[i] = s[i];
+  }
+  return dest;
+}

@@ -10,4 +10,5 @@ int myStrcmp(char *s1, char *s2);
 // effettua una conversione da intero ad alfanumerico
 void itoa(int n, char s[]);
 
+void *memcpy(void *dest, const void *src, int n);
 #endif

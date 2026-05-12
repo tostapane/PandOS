@@ -1,5 +1,6 @@
 #include "headers/vmSupport.h"
 #include "../headers/const.h"
+#include "headers/sysSupport.h"
 #include <uriscv/liburiscv.h>
 
 /* Module-local data structures */
@@ -9,7 +10,7 @@ static int fifo_ptr; /* For the FIFO page replacement algorithm */
 /* Extern semaphore defined in initProc.c to protect this exact Swap Pool */
 extern int swapSemaphore;
 
-void initSwapStructs(){
+void initSwapStructs() {
   /* Initialize the swap pool to empty */
   for (int i = 0; i < POOLSIZE; i++) {
     swapPool[i].sw_asid = -1; /* -1 means this frame is unoccupied */
@@ -19,7 +20,7 @@ void initSwapStructs(){
   fifo_ptr = 0;
 }
 
-void Pager(){
+void Pager() {
   /* 1. Get the current process's Support Structure via SYSCALL GETSUPPORTPTR */
   support_t *supStruct = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
 
@@ -64,7 +65,7 @@ void Pager(){
   /* Calculate the frame address */
   memaddr swapPoolBase = RAMSTART + (OSFRAMES * PAGESIZE);
   memaddr frameAddr = swapPoolBase + (frameIndex * PAGESIZE);
-  
+
   /* 7-8. Check if the chosen frame is occupied. */
   if (swapPool[frameIndex].sw_asid != -1) {
     /* Temporarily disable interrupts to ensure atomicity */
@@ -92,7 +93,9 @@ void Pager(){
 
     /* Find the correct device register */
     unsigned int oldAsid = swapPool[frameIndex].sw_asid;
-    memaddr oldDevRegBase = START_DEVREG + ((INTLINE_FLASH - INTLINE_DISK) * 0x80) + ((oldAsid - 1) * 0x10);
+    memaddr oldDevRegBase = START_DEVREG +
+                            ((INTLINE_FLASH - INTLINE_DISK) * 0x80) +
+                            ((oldAsid - 1) * 0x10);
     volatile dtpreg_t *flashDev = (dtpreg_t *)oldDevRegBase;
 
     /* Tell the device the current data location */
@@ -103,10 +106,11 @@ void Pager(){
     unsigned int flashCmd = (oldPageNo << 8) | FLASHWRITE;
 
     /* Execute the IO operation */
-    int iostatus = SYSCALL(DOIO, (unsigned int)&(flashDev->command), flashCmd, 0);
+    int iostatus =
+        SYSCALL(DOIO, (unsigned int)&(flashDev->command), flashCmd, 0);
 
     /* If IO fails, treat it as program trap*/
-    if(iostatus != 1){
+    if (iostatus != 1) {
       SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
       ProgramTrapHandler(supStruct);
       return;
@@ -116,7 +120,8 @@ void Pager(){
   /* 9. Read the missing page from the Current Process's flash device into the
    * frame. */
   /* Find the correct device register */
-  memaddr devRegBase = START_DEVREG + ((INTLINE_FLASH - INTLINE_DISK) * 0x80) + ((supStruct->sup_asid - 1) * 0x10);
+  memaddr devRegBase = START_DEVREG + ((INTLINE_FLASH - INTLINE_DISK) * 0x80) +
+                       ((supStruct->sup_asid - 1) * 0x10);
   volatile dtpreg_t *flashDev = (dtpreg_t *)devRegBase;
 
   /* Tell the device where to write the new data */
@@ -127,7 +132,7 @@ void Pager(){
   int iostatus = SYSCALL(DOIO, (unsigned int)&(flashDev->command), flashCmd, 0);
 
   /* If IO fails, treat it as program trap*/
-  if(iostatus != 1){
+  if (iostatus != 1) {
     SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
     ProgramTrapHandler(supStruct);
     return;
@@ -142,14 +147,16 @@ void Pager(){
   /* Temporarily disable interrupts to ensure atomicity */
   setSTATUS(getSTATUS() & (~MSTATUS_MIE_MASK));
 
-  /* Turn the Valid and Dirty bit ON, set the PFN field to the newly acquired frame.*/
-  supStruct->sup_privatePgTbl[pageIndex].pte_entryLO = frameAddr | VALIDON | DIRTYON;
+  /* Turn the Valid and Dirty bit ON, set the PFN field to the newly acquired
+   * frame.*/
+  supStruct->sup_privatePgTbl[pageIndex].pte_entryLO =
+      frameAddr | VALIDON | DIRTYON;
 
   /* 12. Atomically update the TLB */
   /* Update the TLB. TODO: caching improvement*/
   TLBCLR();
   /* SOSTITUIRE A TLBLCR() QUANDO IL RESTO FUNZIONA:
-  // Search the TLB for the page we just brought in 
+  // Search the TLB for the page we just brought in
   setENTRYHI(supStruct->sup_privatePgTbl[pageIndex].pte_entryHI);
   TLBP();
 
@@ -162,7 +169,7 @@ void Pager(){
 
   /* Re-enable interrupts */
   setSTATUS(getSTATUS() | MSTATUS_MIE_MASK);
-  
+
   /* 13. Release mutual exclusion over the Swap Pool table */
   SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
 
