@@ -75,8 +75,7 @@ void Pager() {
     swapPool[frameIndex].sw_pte->pte_entryLO &= ~VALIDON;
 
     /* Update the TLB. TODO: caching improvement*/
-    TLBCLR();
-    /* SOSTITUIRE A TLBLCR() QUANDO IL RESTO FUNZIONA:
+    //    TLBCLR();
     // Search the TLB for the exact page we just invalidated
     setENTRYHI(swapPool[frameIndex].sw_pte->pte_entryHI);
     TLBP();
@@ -86,7 +85,6 @@ void Pager() {
       setENTRYLO(swapPool[frameIndex].sw_pte->pte_entryLO);
       TLBWI();
     }
-    */
 
     /* Re-enable interrupts */
     setSTATUS(getSTATUS() | MSTATUS_MIE_MASK);
@@ -154,8 +152,7 @@ void Pager() {
 
   /* 12. Atomically update the TLB */
   /* Update the TLB. TODO: caching improvement*/
-  TLBCLR();
-  /* SOSTITUIRE A TLBLCR() QUANDO IL RESTO FUNZIONA:
+  // TLBCLR();
   // Search the TLB for the page we just brought in
   setENTRYHI(supStruct->sup_privatePgTbl[pageIndex].pte_entryHI);
   TLBP();
@@ -165,7 +162,6 @@ void Pager() {
     setENTRYLO(supStruct->sup_privatePgTbl[pageIndex].pte_entryLO);
     TLBWI();
   }
-  */
 
   /* Re-enable interrupts */
   setSTATUS(getSTATUS() | MSTATUS_MIE_MASK);
