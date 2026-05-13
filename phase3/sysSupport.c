@@ -183,14 +183,35 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
   LDST(&(supStruct->sup_exceptState[1]));
 }
 
+/* richiediamo mutua esclusione per la swap pool
+ * che contiene lo stato degli indirizzi RAM usati dai processi in
+ * quell'istante. Andiamo a modificare lo stato degli indirizzi che stiamo
+ * liberando */
+
 void ProgramTrapHandler(support_t *supStruct) {
   // The process is going to die. We need to clean up its mess.
 
-  // controllo se ha la mutua esclusione sulla page table
-  if (page_mutex_holder == supStruct->sup_asid) {
-    page_mutex_holder = -1;
-    SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
+  // acquisiamo mutua esclusione sulla swap pool
+  // se non la abbiamo gia (controllo su page_mutex_holder).
+  if (page_mutex_holder != supStruct->sup_asid) {
+    SYSCALL(PASSEREN, (unsigned int)&swapSemaphore, 0, 0);
   }
+
+  // OTTIMIZZAZIONE 10.2
+  // mark all of the frame it occupies as unoccpied in order
+  // to eliminate extraneous write to the backing store
+  for (int i = 0; i < POOLSIZE; i++) {
+    if (swapPool[i].sw_asid == supStruct->sup_asid) {
+      swapPool[i].sw_asid = -1;
+      swapPool[i].sw_pageNo = -1;
+      swapPool[i].sw_pte = NULL;
+    }
+  }
+
+  // rilasciamo il semaforo prima di morire
+  page_mutex_holder = -1;
+  SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
+
   // cerco il semaforo corretto
   if (supStruct->sup_asid == 1) {
     /* When the shell terminates, either normally or abnormally, it should
@@ -201,6 +222,6 @@ void ProgramTrapHandler(support_t *supStruct) {
     SYSCALL(VERHOGEN, (unsigned int)&shellSemaphore, 0, 0);
   }
 
-  // termina il proceso
+  // termina il processo
   SYSCALL(TERMPROCESS, 0, 0, 0);
 }

@@ -58,9 +58,23 @@ void Pager() {
     return;
   }
 
+  // OTTIMIZZAZIONE 10.3
+  int frameIndex = -1;
+  // cerchiamo un frame libero e usciamo dal ciclo
+  for (int i = 0; i < POOLSIZE; i++) {
+    if (swapPool[i].sw_asid == -1) {
+      frameIndex = i;
+      break;
+    }
+  }
+
+  // se non troviamo un frame libero usiamo
+  // il seguente algoritmo fifo usato prima dell'ottimizzazione
   /* 6. Pick a frame using a FIFO algorithm */
-  int frameIndex = fifo_ptr;
-  fifo_ptr = (fifo_ptr + 1) % POOLSIZE; /* Increment mod pool size */
+  if (frameIndex == -1) {
+    frameIndex = fifo_ptr;
+    fifo_ptr = (fifo_ptr + 1) % POOLSIZE; /* Increment mod pool size */
+  }
 
   /* Calculate the frame address */
   memaddr swapPoolBase = RAMSTART + (OSFRAMES * PAGESIZE);
@@ -74,8 +88,8 @@ void Pager() {
     /* Set the current page entry as invalid */
     swapPool[frameIndex].sw_pte->pte_entryLO &= ~VALIDON;
 
-    /* Update the TLB. TODO: caching improvement*/
-    //    TLBCLR();
+    // UPDATE THE TLB
+
     // Search the TLB for the exact page we just invalidated
     setENTRYHI(swapPool[frameIndex].sw_pte->pte_entryHI);
     TLBP();
@@ -150,9 +164,8 @@ void Pager() {
   supStruct->sup_privatePgTbl[pageIndex].pte_entryLO =
       frameAddr | VALIDON | DIRTYON;
 
-  /* 12. Atomically update the TLB */
-  /* Update the TLB. TODO: caching improvement*/
-  // TLBCLR();
+  // 12. Atomically update the TLB
+
   // Search the TLB for the page we just brought in
   setENTRYHI(supStruct->sup_privatePgTbl[pageIndex].pte_entryHI);
   TLBP();
