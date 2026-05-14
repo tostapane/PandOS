@@ -1,15 +1,14 @@
 #include "headers/sysSupport.h"
 #include "../headers/const.h"
 #include "headers/initProc.h" /* For the semaphores */
+#include "headers/vmSupport.h"
 #include <uriscv/const.h>
 #include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
 
-/* Assuming you have swapSemaphore defined in initProc.c
-extern int swapSemaphore;
-extern int masterSemaphore;
-extern int shellSemaphore;
-*/
+// buffer per leggere l'header dei nuovi processi
+static char execHeaderBuf[PAGESIZE];
+
 void GeneralExceptionHandler() {
   /* 1. Get the current process's Support Structure via SYSCALL 8 */
   support_t *supStruct = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
@@ -153,15 +152,47 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
         (memaddr) & (newSupport->sup_stackGen[499]);
     newSupport->sup_exceptContext[1].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
 
+    /*
     // private page table
     for (int i = 0; i < 31; i++) {
       newSupport->sup_privatePgTbl[i].pte_entryHI =
           ((0x80000 + i) << VPNSHIFT) | (asid << ASIDSHIFT);
       newSupport->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
     }
-    newSupport->sup_privatePgTbl[31].pte_entryHI =
+    */
+
+    volatile memaddr flashDevBase = START_DEVREG +
+                                    ((INTLINE_FLASH - INTLINE_DISK) * 0x80) +
+                                    ((asid - 1) * 0x10);
+    volatile dtpreg_t *flashDev = (volatile dtpreg_t *)flashDevBase;
+
+    flashDev->data0 = (memaddr)execHeaderBuf;
+    SYSCALL(DOIO, (unsigned int)&(flashDev->command), FLASHREAD, 0);
+
+    // estrazione dimensione del .text
+    unsigned int textSize = *((unsigned int *)execHeaderBuf + 1);
+    unsigned int numTextPages = textSize / PAGESIZE;
+    if (textSize % page_mutex_holder != 0) {
+      numTextPages++;
+    }
+
+    // private page table
+    for (int i = 0; i < MAXPAGES - 1; i++) {
+      newSupport->sup_privatePgTbl[i].pte_entryHI =
+          ((0x80000 + i) << VPNSHIFT) | (asid << ASIDSHIFT);
+
+      // .text in readonly
+      if (i < numTextPages) {
+        newSupport->sup_privatePgTbl[i].pte_entryLO = 0; // sola lettura
+      } else {
+        newSupport->sup_privatePgTbl[i].pte_entryLO = DIRTYON; // scrivibile
+      }
+    }
+
+    // stack page (sempre scrivibile)
+    newSupport->sup_privatePgTbl[MAXPAGES - 1].pte_entryHI =
         (0xBFFFF << VPNSHIFT) | (asid << ASIDSHIFT);
-    newSupport->sup_privatePgTbl[31].pte_entryLO = DIRTYON;
+    newSupport->sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
     // creo il nuovo processo a priorita' 1
     SYSCALL(CREATEPROCESS, (unsigned int)&newState, 1,

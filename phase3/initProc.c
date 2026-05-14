@@ -1,6 +1,8 @@
 #include "headers/initProc.h"
 #include "../headers/const.h"
+#include "headers/vmSupport.h"
 #include <uriscv/liburiscv.h>
+#include <uriscv/types.h>
 
 /* Global variables definition */
 swap_t swapPool[POOLSIZE];
@@ -15,6 +17,12 @@ int shellSemaphore;
 int devSemaphores[NSUPPSEM];
 support_t supStructs[UPROCMAX];
 
+// buffer che usiamo per leggere l'header senza usare lo stack del kernel
+// static poiché viene usato solo in initProc.c
+// usando 'static' la variabile non va nello stack ma nella sezione (.data) del
+// kernel allocata dal compilatore ancora prima che il SO parta
+static char shellHeaderBuf[PAGESIZE];
+
 /* Extern declarations for your exception handlers (assuming you name them
  * logically in sysSupport.c and vmSupport.c) */
 extern void Pager();
@@ -22,6 +30,7 @@ extern void GeneralExceptionHandler();
 
 // Instantiator Process
 void test() {
+
   // Initialize the Swap Pool and its semaphore
   swapSemaphore = 1; // Mutual exclusion, start at
   for (int i = 0; i < POOLSIZE; i++) {
@@ -68,6 +77,7 @@ void test() {
   shellSup->sup_exceptContext[1].status =
       MSTATUS_MPIE_MASK | MSTATUS_MPP_M; // Kernel mode
 
+  /*
   // Initialize the Page Table for the shell
   for (int i = 0; i < MAXPAGES - 1; i++) {
     shellSup->sup_privatePgTbl[i].pte_entryHI =
@@ -75,6 +85,39 @@ void test() {
     shellSup->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
   }
   // Stack page initialization
+  shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryHI =
+      (0xBFFFF << VPNSHIFT) | (1 << ASIDSHIFT);
+  shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
+  */
+
+  // 10.3
+  volatile memaddr flash0Base =
+      START_DEVREG + ((INTLINE_FLASH - INTLINE_DISK) * 0x80) + (0 * 0x10);
+  volatile dtpreg_t *flash0 = (volatile dtpreg_t *)flash0Base;
+
+  flash0->data0 = (memaddr)shellHeaderBuf;
+  SYSCALL(DOIO, (unsigned int)&(flash0->command), FLASHREAD, 0);
+
+  unsigned int textSize = *((unsigned int *)shellHeaderBuf + 1);
+  unsigned int numTextPages = textSize / PAGESIZE;
+  if ((textSize & PAGESIZE) != 0) {
+    numTextPages++;
+  }
+
+  // initialize the page table for the shell
+  for (int i = 0; i < MAXPAGES - 1; i++) {
+    shellSup->sup_privatePgTbl[i].pte_entryHI =
+        ((0x80000 + i) << VPNSHIFT) | (1 << ASIDSHIFT);
+
+    if (i < numTextPages) {
+      shellSup->sup_privatePgTbl[i].pte_entryLO = 0; // sola lettura
+
+    } else {
+      shellSup->sup_privatePgTbl[i].pte_entryLO = DIRTYON; // scrivibile
+    }
+  }
+
+  // stack page initialization
   shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryHI =
       (0xBFFFF << VPNSHIFT) | (1 << ASIDSHIFT);
   shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;

@@ -160,9 +160,17 @@ void Pager() {
   setSTATUS(getSTATUS() & (~MSTATUS_MIE_MASK));
 
   /* Turn the Valid and Dirty bit ON, set the PFN field to the newly acquired
-   * frame.*/
+   * frame.
   supStruct->sup_privatePgTbl[pageIndex].pte_entryLO =
-      frameAddr | VALIDON | DIRTYON;
+      frameAddr | VALIDON | DIRTYON;*/
+
+  // 10.4
+  /* Mappa la pagina logica al frame fisico e attiva il bit Valid.
+   * Viene preservato il bit Dirty pre-esistente per rispettare la protezione
+   * della sezione .text inizializzata a sola lettura. */
+  supStruct->sup_privatePgTbl[pageIndex].pte_entryLO =
+      (supStruct->sup_privatePgTbl[pageIndex].pte_entryLO & DIRTYON) |
+      frameAddr | VALIDON;
 
   // 12. Atomically update the TLB
 
