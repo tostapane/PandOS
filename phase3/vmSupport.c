@@ -7,6 +7,11 @@
 static swap_t swapPool[POOLSIZE];
 static int fifo_ptr; /* For the FIFO page replacement algorithm */
 
+// indirizzo inizio swapPool
+// calcolato in funzione della dimensione del file
+// .core (il quale contiene il SO)
+memaddr swapPoolBase;
+
 /* Extern semaphore defined in initProc.c to protect this exact Swap Pool */
 extern int swapSemaphore;
 
@@ -18,6 +23,21 @@ void initSwapStructs() {
     swapPool[i].sw_pte = NULL;
   }
   fifo_ptr = 0;
+
+  // 10.5
+  // Calcolo della dimensione del kernel per ottenere swapPoolBase
+  // il kernel è caricato subito dopo la prima pagina di RAM
+  memaddr kernelStart = RAMSTART + PAGESIZE;
+  unsigned int *coreHeader = (unsigned int *)kernelStart;
+
+  unsigned int textSize = coreHeader[1];
+  unsigned int dataSize = coreHeader[2];
+  unsigned int bssSize = coreHeader[3];
+
+  memaddr osEnd = kernelStart + 32 + textSize + dataSize + bssSize;
+
+  // arrotondiamo alla prossima pagina
+  swapPoolBase = ((osEnd + PAGESIZE - 1) / PAGESIZE) * PAGESIZE;
 }
 
 void Pager() {
@@ -68,16 +88,6 @@ void Pager() {
     }
   }
 
-  // se non troviamo un frame libero usiamo
-  // il seguente algoritmo fifo usato prima dell'ottimizzazione
-  /* 6. Pick a frame using a FIFO algorithm */
-  if (frameIndex == -1) {
-    frameIndex = fifo_ptr;
-    fifo_ptr = (fifo_ptr + 1) % POOLSIZE; /* Increment mod pool size */
-  }
-
-  /* Calculate the frame address */
-  memaddr swapPoolBase = RAMSTART + (OSFRAMES * PAGESIZE);
   memaddr frameAddr = swapPoolBase + (frameIndex * PAGESIZE);
 
   /* 7-8. Check if the chosen frame is occupied. */
