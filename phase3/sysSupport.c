@@ -1,29 +1,24 @@
 #include "headers/sysSupport.h"
 #include "../headers/const.h"
-#include "headers/initProc.h" /* For the semaphores */
+#include "headers/initProc.h"
 #include "headers/vmSupport.h"
 #include <uriscv/const.h>
 #include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
+#include <uriscv/cpu.h>
 
 // buffer per leggere l'header dei nuovi processi
-static char execHeaderBuf[PAGESIZE];
+static unsigned int execHeaderBuf[PAGESIZE / sizeof(unsigned int)];
 
 void GeneralExceptionHandler() {
-  /* 1. Get the current process's Support Structure via SYSCALL 8 */
   support_t *supStruct = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
 
-  /* 2. Determine the cause of the exception.
-   * Note: Non-TLB exceptions use context 1 (GENERALEXCEPT).
-   */
   unsigned int cause = supStruct->sup_exceptState[1].cause;
-  unsigned int excCode = (cause & GETEXECCODE) >> CAUSESHIFT;
+  unsigned int excCode = (cause & CAUSE_EXCCODE_MASK);
 
-  /* 3. Route the exception */
   if (excCode == SYSEXCEPTION) {
     SyscallExceptionHandler(supStruct, excCode);
   } else {
-    /* Everything else (illegal instructions, address errors, etc.) is a Trap */
     ProgramTrapHandler(supStruct);
   }
 }
@@ -135,9 +130,6 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     newState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
     newState.entry_hi = asid << ASIDSHIFT;
 
-    // inizializzo sup_struct del nuovo processo
-    // TODO: delete it
-    // support_t *newSupport = &supStructs[asid - 1];
     support_t *newSupport = allocateSupport();
 
     if (newSupport == NULL) {
@@ -145,22 +137,18 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
       break;
     }
 
-    // asid
     newSupport->sup_asid = asid;
+
+    memaddr ramtop;
+    RAMTOP(ramtop);
 
     // tlb handler
     newSupport->sup_exceptContext[0].pc = (memaddr)Pager;
-    // TODO: delete it
-    // newSupport->sup_exceptContext[0].stackPtr =
-    //(memaddr) & (newSupport->sup_stackTLB[499]);
-    newSupport->sup_exceptContext[0].stackPtr = ((asid * 2 - 1) * PAGESIZE);
+    newSupport->sup_exceptContext[0].stackPtr = ramtop - ((asid * 2 - 1) * PAGESIZE);
     newSupport->sup_exceptContext[0].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     // general exception handler
     newSupport->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
-    // TODO: delete it
-    // newSupport->sup_exceptContext[1].stackPtr =
-    //(memaddr) & (newSupport->sup_stackGen[499]);
-    newSupport->sup_exceptContext[1].stackPtr = ((asid * 2) * PAGESIZE);
+    newSupport->sup_exceptContext[1].stackPtr = ramtop - ((asid * 2) * PAGESIZE);
     newSupport->sup_exceptContext[1].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
 
     volatile memaddr flashDevBase = START_DEVREG +
