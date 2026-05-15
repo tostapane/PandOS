@@ -143,13 +143,17 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
 
     // tlb handler
     newSupport->sup_exceptContext[0].pc = (memaddr)Pager;
-    newSupport->sup_exceptContext[0].stackPtr =
-        (memaddr) & (newSupport->sup_stackTLB[499]);
+    // TODO: deltete it
+    // newSupport->sup_exceptContext[0].stackPtr =
+    //(memaddr) & (newSupport->sup_stackTLB[499]);
+    newSupport->sup_exceptContext[0].stackPtr = ((asid * 2 - 1) * PAGESIZE);
     newSupport->sup_exceptContext[0].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     // general exception handler
     newSupport->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
-    newSupport->sup_exceptContext[1].stackPtr =
-        (memaddr) & (newSupport->sup_stackGen[499]);
+    // TODO: deltete it
+    // newSupport->sup_exceptContext[1].stackPtr =
+    //(memaddr) & (newSupport->sup_stackGen[499]);
+    newSupport->sup_exceptContext[1].stackPtr = ((asid * 2) * PAGESIZE);
     newSupport->sup_exceptContext[1].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
 
     /*

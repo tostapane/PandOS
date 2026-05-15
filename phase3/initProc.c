@@ -65,18 +65,27 @@ void test() {
 
   // Context 0: TLB Exception Handler (The Pager)
   shellSup->sup_exceptContext[0].pc = (memaddr)Pager;
-  shellSup->sup_exceptContext[0].stackPtr =
-      (memaddr) & (shellSup->sup_stackTLB[499]);
+
+  // estrazione di ramtop
+  memaddr ramtop = RAMTOP(ramtop);
+  // TODO: delete it
+  // shellSup->sup_exceptContext[0].stackPtr =
+  // (memaddr) & (shellSup->sup_stackTLB[499]);
+  shellSup->sup_exceptContext[0].stackPtr = ramtop - PAGESIZE;
+
   shellSup->sup_exceptContext[0].status =
       MSTATUS_MPIE_MASK | MSTATUS_MPP_M; // Kernel mode
 
   /* Context 1: General Exception Handler */
   shellSup->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
-  shellSup->sup_exceptContext[1].stackPtr =
-      (memaddr) & (shellSup->sup_stackGen[499]);
+  // TODO: delete it
+  // shellSup->sup_exceptContext[1].stackPtr =
+  //    (memaddr) & (shellSup->sup_stackGen[499]);
+  shellSup->sup_exceptContext[1].stackPtr = ramtop - (2 * PAGESIZE);
   shellSup->sup_exceptContext[1].status =
       MSTATUS_MPIE_MASK | MSTATUS_MPP_M; // Kernel mode
 
+  // TODO: delete it
   /*
   // Initialize the Page Table for the shell
   for (int i = 0; i < MAXPAGES - 1; i++) {
