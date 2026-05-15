@@ -3,7 +3,11 @@
 #include "../headers/utils.h"
 
 // array dei comandi/programmi disponibili
-command programs[] = {{"calc", 2}, {"test2", 3}, {"test3", 4}};
+command programs[] = {{"calc", 2},      {"sl", 3},        {"date", 4},
+                      {"echo", 5},      {"fibEight", 6},  {"fibEleven", 7},
+                      {"uname", 8}};
+
+
 
 int main() {
   char prompt[12] = "PandOSsh>> ";

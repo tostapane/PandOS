@@ -3,7 +3,8 @@
 
 #include <uriscv/liburiscv.h>
 
-#define NUM_PROGRAMS 3
+#define NUM_PROGRAMS 7
+
 
 /* Struttura che definisce un comando, composto da
  * il suo nome e il suo ASID (Address Space Identifier) */

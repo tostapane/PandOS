@@ -14,6 +14,30 @@
             "enabled": true,
             "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/calc.uriscv"
         },
+        "flash2": {
+            "enabled": true,
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/sl.uriscv"
+        },
+        "flash3": {
+            "enabled": true,
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/date.uriscv"
+        },
+        "flash4": {
+            "enabled": true,
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/echo.uriscv"
+        },
+        "flash5": {
+            "enabled": true,
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/fibEight.uriscv"
+        },
+        "flash6": {
+            "enabled": true,
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/fibEleven.uriscv"
+        },
+        "flash7": {
+            "enabled": true,
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/uname.uriscv"
+        },
         "terminal0": {
             "enabled": true,
             "file": "term0.uriscv"

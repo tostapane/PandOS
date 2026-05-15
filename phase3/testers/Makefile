@@ -1,43 +1,45 @@
-# Makefile for PandOSsh Phase 3 U-procs
-XT_PRG_PREFIX = riscv64-unknown-elf-
+#$Id: Makefile,v 1.2 2004/05/01 14:53:48 morsiani Exp morsiani $
+# Makefile for mipsel-linux
+#
+XT_PRG_PREFIX = riscv32-unknown-linux-gnu-
 CC = $(XT_PRG_PREFIX)gcc
 LD = $(XT_PRG_PREFIX)ld
+AS = $(XT_PRG_PREFIX)as
+OBJCOPY = $(XT_PRG_PREFIX)objcopy
+OBJDUMP = $(XT_PRG_PREFIX)objdump
+
+# uRISCV-related paths
+URISCV_DIR_PREFIX = /usr/local
+
+URISCV_DATA_DIR = $(URISCV_DIR_PREFIX)/share/uriscv
+URISCV_INCLUDE_DIR = $(URISCV_DIR_PREFIX)/include
+URISCV_LIB_DIR = $(URISCV_DIR_PREFIX)/lib/uriscv
+
+TDEFS = ../headers/print.h ../headers/tconst.h ../headers/utils.h Makefile
+
+# CFLAGS = -ffreestanding -ansi -c -mips1 -mabi=32 -mfp32 -mno-gpopt -G 0 -I$(URISCV_INCLUDE_DIR) -std=gnu99 -fno-pic -mno-abicalls
+CFLAGS_LANG = -ffreestanding -static -c -nostdlib
+CFLAGS = $(CFLAGS_LANG) -I$(URISCV_INCLUDE_DIR) -I../headers -Wall -O0 -march=rv32imfd -mabi=ilp32d
+# -Wall
+
+LDAOUTFLAGS = -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvaout.ldscript
+LDCOREFLAGS = -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvcore.ldscript
+
+# AS = mipsel-linux-gnu-as -KPIC
+
 EF = uriscv-elf2uriscv
 UDEV = uriscv-mkdev
 
-# uRISCV-related paths
-URISCV_DATA_DIR = /usr/local/share/uriscv
-URISCV_INCLUDE_DIR = /usr/local/include
+# main target
+all: shell.uriscv fibEight.uriscv echo.uriscv fibEleven.uriscv uname.uriscv calc.uriscv date.uriscv sl.uriscv
 
-# Project paths
-# We are inside phase3/testers/
-HEADERS_DIR = ../../headers
-P3_HEADERS_DIR = ../headers
+.PRECIOUS: %.t %.t.aout.uriscv %.uriscv %.o
 
-# Compiler and Linker flags
-INCLUDES = -I$(URISCV_INCLUDE_DIR) -I$(HEADERS_DIR) -I$(P3_HEADERS_DIR)
-CFLAGS = -ffreestanding -static -nostdlib -Wall -O0 -march=rv32imafd -mabi=ilp32d $(INCLUDES)
-LDAOUTFLAGS = -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvaout.ldscript -march=rv32imafd -melf32lriscv
+%.o: %.c $(TDEFS)
+	$(CC) $(CFLAGS) $< -o $@
 
-# Targets
-all: shell.uriscv calc.uriscv
-
-# Support objects
-crti.o: $(URISCV_DATA_DIR)/crti.S
-	$(CC) $(CFLAGS) -c $< -o $@
-
-liburiscv.o: $(URISCV_DATA_DIR)/liburiscv.S
-	$(CC) $(CFLAGS) -c $< -o $@
-
-utils.o: utils.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Pattern rules for tester programs
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.t: %.o utils.o crti.o liburiscv.o
-	$(LD) $(LDAOUTFLAGS) crti.o $< utils.o liburiscv.o -o $@
+%.t: %.o print.o utils.o $(URISCV_LIB_DIR)/crti.o
+	$(LD) $(LDAOUTFLAGS) $(URISCV_LIB_DIR)/crti.o $< print.o utils.o $(URISCV_LIB_DIR)/liburiscv.o -o $@
 
 %.t.aout.uriscv: %.t
 	$(EF) -a $<
@@ -47,3 +49,4 @@ utils.o: utils.c
 
 clean:
 	rm -f *.o *.t *.uriscv
+
