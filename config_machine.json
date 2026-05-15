@@ -8,11 +8,11 @@
     "devices": {
         "flash0": {
             "enabled": true,
-            "file": "/home/ponziopilato/Universita/cosedue/sistemi/progetto/Progetto-Sistemi-Operativi/phase3/testers/shell.uriscv"
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/shell.uriscv"
         },
         "flash1": {
             "enabled": true,
-            "file": "/home/ponziopilato/Universita/cosedue/sistemi/progetto/Progetto-Sistemi-Operativi/phase3/testers/calc.uriscv"
+            "file": "/home/andrea/Desktop/uni/sistemiOperativi/progetto/Progetto-Sistemi-Operativi/phase3/testers/calc.uriscv"
         },
         "terminal0": {
             "enabled": true,

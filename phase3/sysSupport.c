@@ -174,7 +174,7 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     // estrazione dimensione del .text
     unsigned int textSize = *((unsigned int *)execHeaderBuf + 1);
     unsigned int numTextPages = textSize / PAGESIZE;
-    if (textSize % page_mutex_holder != 0) {
+    if ((textSize % PAGESIZE) != 0) {
       numTextPages++;
     }
 

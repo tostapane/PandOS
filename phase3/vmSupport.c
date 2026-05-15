@@ -88,6 +88,11 @@ void Pager() {
     }
   }
 
+  if (frameIndex == -1) {
+    frameIndex = fifo_ptr;
+    fifo_ptr = (fifo_ptr + 1) % POOLSIZE;
+  }
+
   memaddr frameAddr = swapPoolBase + (frameIndex * PAGESIZE);
 
   /* 7-8. Check if the chosen frame is occupied. */

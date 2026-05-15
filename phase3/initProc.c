@@ -135,7 +135,7 @@ void test() {
 
   unsigned int textSize = *((unsigned int *)shellHeaderBuf + 1);
   unsigned int numTextPages = textSize / PAGESIZE;
-  if ((textSize & PAGESIZE) != 0) {
+  if ((textSize % PAGESIZE) != 0) {
     numTextPages++;
   }
 
