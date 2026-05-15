@@ -9,6 +9,9 @@ swap_t swapPool[POOLSIZE];
 int swapSemaphore;
 int masterSemaphore;
 
+// lista delle supprt struct libere
+LIST_HEAD(supStructs_freeList);
+
 int page_mutex_holder;
 
 // gestisce la concorrenza tra la shell e un suo processo figlio.
@@ -28,6 +31,20 @@ static char shellHeaderBuf[PAGESIZE];
 extern void Pager();
 extern void GeneralExceptionHandler();
 
+// restituisce una struttura libera se esiste, NULL altrimenti
+support_t *allocateSupport() {
+  if (list_empty(&supStructs_freeList))
+    return NULL;
+  struct list_head *l = supStructs_freeList.next;
+  list_del(l);
+  return container_of(l, support_t, s_list);
+}
+
+// rende una struttura nuovamente disponibile
+void deallocateSupport(support_t *s) {
+  list_add(&(s->s_list), &supStructs_freeList);
+}
+
 // Instantiator Process
 void test() {
 
@@ -40,6 +57,12 @@ void test() {
   // Initialize device semaphores
   for (int i = 0; i < NSUPPSEM; i++) {
     devSemaphores[i] = 1;
+  }
+
+  /* Initialize supStructs_freeList and support structs */
+  INIT_LIST_HEAD(&supStructs_freeList);
+  for (int i = 0; i < UPROCMAX; i++) {
+    deallocateSupport(&supStructs[i]);
   }
 
   // Initialize synchronization semaphores
@@ -59,7 +82,10 @@ void test() {
   shellState.entry_hi = (1 << ASIDSHIFT);
 
   // Initialize the Support Structure for the shell
-  support_t *shellSup = &supStructs[0];
+  support_t *shellSup = allocateSupport();
+  if (shellSup == NULL)
+    SYSCALL(TERMPROCESS, 0, 0, 0);
+
   // la shell ha asid 1
   shellSup->sup_asid = 1;
 

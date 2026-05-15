@@ -17,6 +17,12 @@ extern int devSemaphores[NSUPPSEM];
 /* Array of Support Structures for up to 8 U-procs */
 extern support_t supStructs[UPROCMAX];
 
+/* Return a free support struct, NULL otherwise */
+support_t *allocateSupport();
+
+/* Makes a struct available again */
+void deallocateSupport(support_t *s);
+
 /* The Instantiator Process  */
 void test();
 

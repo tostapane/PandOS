@@ -136,34 +136,32 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     newState.entry_hi = asid << ASIDSHIFT;
 
     // inizializzo sup_struct del nuovo processo
-    support_t *newSupport = &supStructs[asid - 1];
+    // TODO: delete it
+    // support_t *newSupport = &supStructs[asid - 1];
+    support_t *newSupport = allocateSupport();
+
+    if (newSupport == NULL) {
+      supStructs->sup_exceptState[GENERALEXCEPT].reg_a0 = -1;
+      break;
+    }
 
     // asid
     newSupport->sup_asid = asid;
 
     // tlb handler
     newSupport->sup_exceptContext[0].pc = (memaddr)Pager;
-    // TODO: deltete it
+    // TODO: delete it
     // newSupport->sup_exceptContext[0].stackPtr =
     //(memaddr) & (newSupport->sup_stackTLB[499]);
     newSupport->sup_exceptContext[0].stackPtr = ((asid * 2 - 1) * PAGESIZE);
     newSupport->sup_exceptContext[0].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     // general exception handler
     newSupport->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
-    // TODO: deltete it
+    // TODO: delete it
     // newSupport->sup_exceptContext[1].stackPtr =
     //(memaddr) & (newSupport->sup_stackGen[499]);
     newSupport->sup_exceptContext[1].stackPtr = ((asid * 2) * PAGESIZE);
     newSupport->sup_exceptContext[1].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
-
-    /*
-    // private page table
-    for (int i = 0; i < 31; i++) {
-      newSupport->sup_privatePgTbl[i].pte_entryHI =
-          ((0x80000 + i) << VPNSHIFT) | (asid << ASIDSHIFT);
-      newSupport->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
-    }
-    */
 
     volatile memaddr flashDevBase = START_DEVREG +
                                     ((INTLINE_FLASH - INTLINE_DISK) * 0x80) +
@@ -256,6 +254,9 @@ void ProgramTrapHandler(support_t *supStruct) {
     // se e' un figlio della shell, sveglia la shell
     SYSCALL(VERHOGEN, (unsigned int)&shellSemaphore, 0, 0);
   }
+
+  // returning the struct to the freeList
+  deallocateSupport(supStruct);
 
   // termina il processo
   SYSCALL(TERMPROCESS, 0, 0, 0);
