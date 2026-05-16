@@ -1,7 +1,11 @@
 #include <uriscv/liburiscv.h>
-
 #include "../headers/print.h"
 #include "../headers/tconst.h"
+
+/**
+ * Applicazione 'sl' (Steam Locomotive) per PandOS.
+ * Visualizza un'animazione ASCII statica di una locomotiva.
+ */
 
 #define LOGO1 "     ++      +------ "
 #define LOGO2 "     ||      |+-+ |  "
@@ -12,11 +16,14 @@
 #define LWHL12 "//// \\_/      \\_/  "
 
 void main() {
+  /* Stampa riga per riga per comporre l'immagine della locomotiva */
   print(WRITETERMINAL, LOGO1 "\n");
   print(WRITETERMINAL, LOGO2 "\n");
   print(WRITETERMINAL, LOGO3 "\n");
   print(WRITETERMINAL, LOGO4 "\n");
   print(WRITETERMINAL, LWHL11 "\n");
   print(WRITETERMINAL, LWHL12 "\n");
+  
+  /* Terminazione del processo */
   SYSCALL(TERMINATE, 0, 0, 0);
 }

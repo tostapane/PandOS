@@ -3,16 +3,23 @@
 
 #include <uriscv/liburiscv.h>
 
+/**
+ * Definizioni per l'interprete dei comandi (shell).
+ * Gestisce la mappatura tra nomi dei programmi e i loro identificativi di
+ * spazio indirizzi.
+ */
+
 #define NUM_PROGRAMS 7
 
-
-/* Struttura che definisce un comando, composto da
- * il suo nome e il suo ASID (Address Space Identifier) */
+/**
+ * Rappresenta un programma eseguibile dalla shell.
+ */
 typedef struct command {
-  char *name;
-  int asid;
+  char *name; /* Nome del comando inserito dall'utente */
+  int asid;   /* ASID associato al dispositivo Flash contenente il binario */
 } command;
 
+/* Elenco dei programmi disponibili per l'esecuzione */
 extern command programs[];
 
 /* La shell stampa la riga "PandOSsh>> ", poi esegue la funzione SYSCALL

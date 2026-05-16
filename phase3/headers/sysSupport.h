@@ -4,18 +4,36 @@
 #include "../../headers/const.h"
 #include "../../headers/types.h"
 
+/**
+ * Definizioni e costanti per il supporto alle eccezioni di sistema.
+ * Questo header definisce l'interfaccia per la gestione delle chiamate di sistema
+ * e delle terminazioni dei processi utente.
+ */
+
 #define START_ADDR 0x10000054
 #define READTERMINAL 5
 #define EXECUTE 6
 
+/* Handler esterno per la gestione del rimpiazzo delle pagine */
 extern void Pager();
-/* The main entry point for non-TLB exceptions passed up by the Nucleus. */
+
+/**
+ * Entry point per le eccezioni non legate al TLB passate dal Nucleus.
+ * Coordina la distribuzione tra SYSCALL e Program Trap.
+ */
 void GeneralExceptionHandler();
 
-/* Handles SYSCALLs >= 1 */
+/**
+ * Gestisce le system call invocate dai processi utente (SYSCALL >= 1).
+ * @param supStruct Puntatore alla struttura di supporto del processo chiamante.
+ * @param excCode Codice identificativo dell'eccezione.
+ */
 void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode);
 
-/* Handles U-proc fatal errors */
+/**
+ * Gestisce la terminazione, sia normale che anomala, di un processo utente.
+ * @param supStruct Puntatore alla struttura di supporto del processo da terminare.
+ */
 void ProgramTrapHandler(support_t *supStruct);
 
 #endif

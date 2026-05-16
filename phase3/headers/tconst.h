@@ -1,9 +1,19 @@
-#define EOS '\0'
+#ifndef TCONST_H
+#define TCONST_H
 
-/* Support level SYS calls */
-#define GET_TOD       1
-#define TERMINATE     2
-#define WRITEPRINTER  3
-#define WRITETERMINAL 4
-#define READTERMINAL  5
-#define EXECUTE       6
+/**
+ * Costanti per il Support Level.
+ * Definisce i codici delle system call disponibili per i processi utente.
+ */
+
+#define EOS '\0' /* End Of String */
+
+/* Codici identificativi per le System Call della Fase 3 */
+#define GET_TOD       1 /* Get Time of Day */
+#define TERMINATE     2 /* Terminate Process */
+#define WRITEPRINTER  3 /* Write to Printer */
+#define WRITETERMINAL 4 /* Write to Terminal */
+#define READTERMINAL  5 /* Read from Terminal */
+#define EXECUTE       6 /* Execute Program */
+
+#endif
