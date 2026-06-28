@@ -1,45 +1,48 @@
-#$Id: Makefile,v 1.2 2004/05/01 14:53:48 morsiani Exp morsiani $
-# Makefile for mipsel-linux
+# Makefile per gli U-proc di PandOSsh Phase 3 (adattato per Debian)
 #
-XT_PRG_PREFIX = riscv32-unknown-linux-gnu-
+# Differenze rispetto al Makefile fornito dai prof:
+#  - Toolchain: su questa macchina e' installata solo riscv64-unknown-elf-
+#    (riscv32-unknown-linux-gnu- e' assente). Il march/abi rv32 e' imposto via flag.
+#  - Header uriscv in /usr/include, ldscript e sorgenti in /usr/local/share/uriscv.
+#  - Ogni tester viene linkato con print.o E utils.o (i tester usano sia print()
+#    sia myStrlen/myStrcmp/itoa).
+#  - crti.o e liburiscv.o vengono ricompilati dai .S con lo stesso march/abi dei
+#    tester, per garantire ABI coerente.
+
+XT_PRG_PREFIX = riscv64-unknown-elf-
 CC = $(XT_PRG_PREFIX)gcc
 LD = $(XT_PRG_PREFIX)ld
-AS = $(XT_PRG_PREFIX)as
-OBJCOPY = $(XT_PRG_PREFIX)objcopy
-OBJDUMP = $(XT_PRG_PREFIX)objdump
-
-# uRISCV-related paths
-URISCV_DIR_PREFIX = /usr/local
-
-URISCV_DATA_DIR = $(URISCV_DIR_PREFIX)/share/uriscv
-URISCV_INCLUDE_DIR = $(URISCV_DIR_PREFIX)/include
-URISCV_LIB_DIR = $(URISCV_DIR_PREFIX)/lib/uriscv
-
-TDEFS = ../headers/print.h ../headers/tconst.h ../headers/utils.h Makefile
-
-# CFLAGS = -ffreestanding -ansi -c -mips1 -mabi=32 -mfp32 -mno-gpopt -G 0 -I$(URISCV_INCLUDE_DIR) -std=gnu99 -fno-pic -mno-abicalls
-CFLAGS_LANG = -ffreestanding -static -c -nostdlib
-CFLAGS = $(CFLAGS_LANG) -I$(URISCV_INCLUDE_DIR) -I../headers -Wall -O0 -march=rv32imfd -mabi=ilp32d
-# -Wall
-
-LDAOUTFLAGS = -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvaout.ldscript
-LDCOREFLAGS = -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvcore.ldscript
-
-# AS = mipsel-linux-gnu-as -KPIC
-
 EF = uriscv-elf2uriscv
 UDEV = uriscv-mkdev
 
-# main target
-all: shell.uriscv fibEight.uriscv echo.uriscv fibEleven.uriscv uname.uriscv calc.uriscv date.uriscv sl.uriscv
+# uRISCV-related paths (Debian)
+URISCV_DATA_DIR = /usr/local/share/uriscv
+URISCV_INCLUDE_DIR = /usr/include
 
-.PRECIOUS: %.t %.t.aout.uriscv %.uriscv %.o
+# Project paths (siamo dentro phase3/testers/)
+HEADERS_DIR = ../../headers
+P3_HEADERS_DIR = ../headers
 
-%.o: %.c $(TDEFS)
-	$(CC) $(CFLAGS) $< -o $@
+INCLUDES = -I$(URISCV_INCLUDE_DIR) -I$(HEADERS_DIR) -I$(P3_HEADERS_DIR)
+CFLAGS = -ffreestanding -static -nostdlib -Wall -O0 -march=rv32imafd -mabi=ilp32d $(INCLUDES)
+LDAOUTFLAGS = -G 0 -nostdlib -m elf32lriscv -T $(URISCV_DATA_DIR)/uriscvaout.ldscript
 
-%.t: %.o print.o utils.o $(URISCV_LIB_DIR)/crti.o
-	$(LD) $(LDAOUTFLAGS) $(URISCV_LIB_DIR)/crti.o $< print.o utils.o $(URISCV_LIB_DIR)/liburiscv.o -o $@
+# print.c e utils.c sono librerie di supporto, NON programmi: niente .uriscv per loro.
+all: shell.uriscv calc.uriscv date.uriscv echo.uriscv fibEight.uriscv fibEleven.uriscv sl.uriscv uname.uriscv
+
+# Oggetti di supporto ricompilati dai sorgenti uriscv
+crti.o: $(URISCV_DATA_DIR)/crti.S
+	$(CC) $(CFLAGS) -c $< -o $@
+
+liburiscv.o: $(URISCV_DATA_DIR)/liburiscv.S
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Regola generica per i .o dei tester e per print.o/utils.o (sorgenti locali)
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.t: %.o print.o utils.o crti.o liburiscv.o
+	$(LD) $(LDAOUTFLAGS) crti.o $< print.o utils.o liburiscv.o -o $@
 
 %.t.aout.uriscv: %.t
 	$(EF) -a $<
@@ -48,5 +51,4 @@ all: shell.uriscv fibEight.uriscv echo.uriscv fibEleven.uriscv uname.uriscv calc
 	$(UDEV) -f $@ $<
 
 clean:
-	rm -f *.o *.t *.uriscv
-
+	rm -f *.o *.t *.uriscv *.t.aout.uriscv

@@ -26,41 +26,6 @@ int subDevice[NRSEMAPHORES];
 // processo
 cpu_t processTimer;
 
-/**
- * SECTION 3: The TLB-Refill event handler
- */
-void uTLB_RefillHandler() {
-  // 1. Get the pointer to the saved state from the BIOS data page
-  state_t *saved_state = (state_t *)BIOSDATAPAGE;
-
-  // 2. Read the register EntryHi that caused the TLB Miss
-  unsigned int missing_EntryHi = saved_state->entry_hi;
-
-  // 3. Extract the Virtual Page Number (VPN).
-  // The logical address is in the upper bits. It depends on the macros in
-  // liburiscv.h, but conceptually you need to isolate the page index.
-  unsigned int vpn = (missing_EntryHi & GETPAGENO) >> VPNSHIFT;
-  int p;
-  if (vpn >= 0xBFFFF)
-    p = 31; // stack page
-  else
-    p = vpn - 0x80000; // text/data pages
-
-  // 4. Take the entry from the Page Table in the Support Structure of the
-  // Current Process, at index 'p'.
-  pteEntry_t missing_pte = currProc->p_supportStruct->sup_privatePgTbl[p];
-
-  // 5. Load the values into the registers
-  setENTRYHI(missing_pte.pte_entryHI);
-  setENTRYLO(missing_pte.pte_entryLO);
-
-  // 6. Write the entry to the TLB
-  TLBWR();
-
-  // 7. Reload the state saved at the beginning
-  LDST(saved_state);
-}
-
 int main() {
 
   /* Struttura che serve a gestire le eccezioni incluse quelle relative alla

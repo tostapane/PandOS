@@ -3,9 +3,9 @@
 #include "headers/initProc.h"
 #include "headers/vmSupport.h"
 #include <uriscv/const.h>
+#include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
-#include <uriscv/cpu.h>
 
 // buffer per leggere l'header dei nuovi processi
 static unsigned int execHeaderBuf[PAGESIZE / sizeof(unsigned int)];
@@ -59,7 +59,7 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     volatile termreg_t *term_reg = (volatile termreg_t *)term0base;
     unsigned commandAddr = (unsigned)&term_reg->transm_command;
     int nsent = 0;
-    unsigned i;
+    int i;
     for (i = 0; i < len; ++i) {
       unsigned cmd = (addr[i] << 8) | TRANSMITCHAR;
       int ioStatus = SYSCALL(DOIO, commandAddr, cmd, 0);
@@ -80,8 +80,9 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
   }
 
   case READTERMINAL: {
-    // seleziono il semaforo del terminal 0 in lettura
-    unsigned int readMutex = (unsigned int)&(devSemaphores[40]);
+    // semaforo del terminal 0 in lettura: il sub-device "receive" e' all'indice
+    // 32, distinto da quello di "transmit" (40) usato dalla WRITETERMINAL.
+    unsigned int readMutex = (unsigned int)&(devSemaphores[32]);
     SYSCALL(PASSEREN, readMutex, 0, 0);
     unsigned int vAddr =
         (unsigned int)supStruct->sup_exceptState[GENERALEXCEPT].reg_a1;
@@ -99,7 +100,7 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
       volatile termreg_t *term_register = (volatile termreg_t *)term0base;
       unsigned int commAddr = (unsigned int)&term_register->recv_command;
       int ioStatus = SYSCALL(DOIO, commAddr, RECEIVECHAR, 0);
-      if ((ioStatus & 0xFF) != READTERMINAL) {
+      if ((ioStatus & 0xFF) != CHARRECV) {
         supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = -(ioStatus & 0xFF);
         break;
       }
@@ -123,6 +124,14 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     }
     unsigned int asid = supStruct->sup_exceptState[GENERALEXCEPT].reg_a1;
 
+    /* L'ASID deve essere nel range [2..UPROCMAX]: 0 e' del kernel, 1 e' la
+     * shell. Un valore fuori range renderebbe invalidi l'offset del device
+     * flash, la page table e gli stack degli handler. */
+    if (asid <= 1 || asid > UPROCMAX) {
+      supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = -1;
+      break;
+    }
+
     // inizializzo status del nuovo processo
     state_t newState;
     newState.pc_epc = UPROCSTARTADDR;
@@ -133,7 +142,7 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     support_t *newSupport = allocateSupport();
 
     if (newSupport == NULL) {
-      supStructs->sup_exceptState[GENERALEXCEPT].reg_a0 = -1;
+      supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = -1;
       break;
     }
 
@@ -144,11 +153,13 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
 
     // tlb handler
     newSupport->sup_exceptContext[0].pc = (memaddr)Pager;
-    newSupport->sup_exceptContext[0].stackPtr = ramtop - ((asid * 2 - 1) * PAGESIZE);
+    newSupport->sup_exceptContext[0].stackPtr =
+        ramtop - ((asid * 2 - 1) * PAGESIZE);
     newSupport->sup_exceptContext[0].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     // general exception handler
     newSupport->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
-    newSupport->sup_exceptContext[1].stackPtr = ramtop - ((asid * 2) * PAGESIZE);
+    newSupport->sup_exceptContext[1].stackPtr =
+        ramtop - ((asid * 2) * PAGESIZE);
     newSupport->sup_exceptContext[1].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
 
     volatile memaddr flashDevBase = START_DEVREG +
@@ -157,7 +168,15 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     volatile dtpreg_t *flashDev = (volatile dtpreg_t *)flashDevBase;
 
     flashDev->data0 = (memaddr)execHeaderBuf;
-    SYSCALL(DOIO, (unsigned int)&(flashDev->command), FLASHREAD, 0);
+    int headerStatus =
+        SYSCALL(DOIO, (unsigned int)&(flashDev->command), FLASHREAD, 0);
+    /* Errore di lettura dell'header dal flash (spec 4.2/8): niente spawn, -1 al
+     * chiamante. La support struct gia' allocata va restituita. */
+    if (headerStatus != 1) {
+      deallocateSupport(newSupport);
+      supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = -1;
+      break;
+    }
 
     // estrazione dimensione del .text
     unsigned int textSize = *((unsigned int *)execHeaderBuf + 1);
@@ -245,6 +264,9 @@ void ProgramTrapHandler(support_t *supStruct) {
 
   // returning the struct to the freeList
   deallocateSupport(supStruct);
+
+  // clear the TLB
+  TLBCLR();
 
   // termina il processo
   SYSCALL(TERMPROCESS, 0, 0, 0);

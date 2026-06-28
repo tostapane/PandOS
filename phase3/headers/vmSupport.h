@@ -4,7 +4,10 @@
 #include "../../headers/types.h"
 #include "../../headers/const.h"
 
-#define EXC_TLBMOD 1
+/* Codice eccezione TLB-Modification in uriscv (EXC_MOD in <uriscv/cpu.h>).
+ * Il Nucleus instrada gli exCode 24..28 al TLB handler / Pager, quindi qui va
+ * confrontato con 24, NON con 1. */
+#define EXC_TLBMOD 24
 #define INTLINE_DISK 3
 #define INTLINE_FLASH 4
 

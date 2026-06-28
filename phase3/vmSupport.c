@@ -50,13 +50,13 @@ void Pager() {
   unsigned int missingPageNumber = (missingPageEntryHi & 0xFFFFF000) >> VPNSHIFT;
 
   int pageIndex = -1;
-  if (missingPageNumber == 0xBFFFF || missingPageNumber == 0x3FFFF) {
-    pageIndex = MAXPAGES - 1;
-  } else if (missingPageNumber >= 0x80000 && missingPageNumber < 0x80000 + (MAXPAGES - 1)) {
-    pageIndex = missingPageNumber - 0x80000;
-  } else if (missingPageNumber < (MAXPAGES - 1)) {
-    pageIndex = missingPageNumber;
+  if (missingPageNumber == 0xBFFFF) {
+    pageIndex = MAXPAGES - 1; // pagina di stack (0xBFFFF000)
+  } else if (missingPageNumber >= 0x80000 &&
+             missingPageNumber < 0x80000 + (MAXPAGES - 1)) {
+    pageIndex = missingPageNumber - 0x80000; // pagine text/data
   } else {
+    // indirizzo fuori dallo spazio logico del U-proc -> program trap
     page_mutex_holder = -1;
     SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
     ProgramTrapHandler(supStruct);

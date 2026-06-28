@@ -3,11 +3,9 @@
 #include "../headers/utils.h"
 
 // array dei comandi/programmi disponibili
-command programs[] = {{"calc", 2},      {"sl", 3},        {"date", 4},
-                      {"echo", 5},      {"fibEight", 6},  {"fibEleven", 7},
+command programs[] = {{"calc", 2}, {"sl", 3},       {"date", 4},
+                      {"echo", 5}, {"fibEight", 6}, {"fibEleven", 7},
                       {"uname", 8}};
-
-
 
 int main() {
   char prompt[12] = "PandOSsh>> ";
@@ -44,8 +42,10 @@ int main() {
         }
       }
       if (!found && myStrlen(inputBuf) > 0) {
-        char errMsg[] = "Command not found.\n";
+        char errMsg[] = "Command not found.";
+        char newline[] = "\n";
         SYSCALL(WRITETERMINAL, (unsigned int)errMsg, myStrlen(errMsg), 0);
+        SYSCALL(WRITETERMINAL, (unsigned int)newline, 1, 0);
       }
     }
   }

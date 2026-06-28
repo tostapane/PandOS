@@ -45,7 +45,7 @@ void deallocateSupport(support_t *s) {
   list_add(&(s->s_list), &supStructs_freeList);
 }
 
-void Phase3_uTLB_RefillHandler() {
+void uTLB_RefillHandler() {
   state_t *saved_state = (state_t *)BIOSDATAPAGE;
   unsigned int missing_EntryHi = saved_state->entry_hi;
 
@@ -58,7 +58,7 @@ void Phase3_uTLB_RefillHandler() {
     p = vpn - 0x80000; // text/data pages
 
   if (p < 0 || p >= MAXPAGES) {
-      PANIC();
+    PANIC();
   }
 
   extern pcb_t *currProc;
@@ -73,7 +73,7 @@ void Phase3_uTLB_RefillHandler() {
 // Instantiator Process
 void test() {
   passupvector_t *passupvector = (passupvector_t *)PASSUPVECTOR;
-  passupvector->tlb_refill_handler = (memaddr)Phase3_uTLB_RefillHandler;
+  passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
 
   // Initialize the Swap Pool and its semaphore
   swapSemaphore = 1; // Mutual exclusion, start at
@@ -136,7 +136,12 @@ void test() {
   volatile dtpreg_t *flash0 = (volatile dtpreg_t *)flash0Base;
 
   flash0->data0 = (memaddr)shellHeaderBuf;
-  SYSCALL(DOIO, (unsigned int)&(flash0->command), FLASHREAD, 0);
+  int shellHeaderStatus =
+      SYSCALL(DOIO, (unsigned int)&(flash0->command), FLASHREAD, 0);
+  /* Se non riusciamo a leggere l'header della shell il sistema non puo'
+   * avviarsi: errore fatale di inizializzazione. */
+  if (shellHeaderStatus != 1)
+    PANIC();
 
   unsigned int textSize = *((unsigned int *)shellHeaderBuf + 1);
   unsigned int numTextPages = textSize / PAGESIZE;
