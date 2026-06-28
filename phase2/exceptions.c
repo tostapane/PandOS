@@ -4,38 +4,12 @@
 #include <uriscv/liburiscv.h>
 
 /**
- * @brief Gestore per gli eventi di TLB-Refill.
+ * @brief Gestore "placeholder" per gli eventi di TLB-Refill.
  *
- * Implementa la logica di caricamento delle entry dalla Page Table privata
- * del processo corrente nel TLB hardware.
+ * Questa funzione è un gestore speciale che viene chiamato solo per eventi di
+ * TLB-Refill. Per la Fase 2, il suo codice è fisso.
  */
-// oid uTLB_RefillHandler() {
-//  state_t *saved_state = (state_t *)BIOSDATAPAGE;
-//  unsigned int missing_EntryHi = saved_state->entry_hi;
-//
-//  /* VPN: i 20 bit piu' significativi */
-//  unsigned int vpn = (missing_EntryHi & 0xFFFFF000) >> VPNSHIFT;
-//  int p;
-//
-//  /* Mappatura VPN -> indice tabella pagine */
-//  if (vpn >= 0xBFFFF)
-//    p = MAXPAGES - 1; // Stack
-//  else
-//    p = vpn - 0x80000; // Text/Data
-//
-//  if (p < 0 || p >= MAXPAGES) {
-//    PANIC();
-//  }
-//
-//  /* Recupero della entry dalla tabella delle pagine del processo corrente */
-//  pteEntry_t missing_pte = currProc->p_supportStruct->sup_privatePgTbl[p];
-//
-//  /* Scrittura nel TLB hardware */
-//  setENTRYHI(missing_pte.pte_entryHI);
-//  setENTRYLO(missing_pte.pte_entryLO);
-//  TLBWR();
-//  LDST(saved_state);
-//
+extern void uTLB_RefillHandler(void);
 
 /**
  * @brief Copia un blocco di memoria da una sorgente a una destinazione.
@@ -53,6 +27,16 @@ void *memcpy(void *dest, const void *src, unsigned int n) {
   }
   return dest;
 }
+
+// La funzione è dichiarata extern in initial.c,
+// tuttavia è definito in p2test.c
+// void uTLB_RefillHandler()
+// {
+//   setENTRYHI(0x80000000);
+//   setENTRYLO(0x00000000);
+//   TLBWR();
+//   LDST((state_t *)BIOSDATAPAGE);
+// }
 
 /**
  * @brief Funzione ricorsiva per cercare un PCB dato un PID, partendo da una

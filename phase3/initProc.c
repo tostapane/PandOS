@@ -4,50 +4,34 @@
 #include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
 
-/**
- * Gestione delle strutture di supporto e inizializzazione del sistema per la
- * Fase 3. Questo file contiene l'Instantiator Process (test) che prepara
- * l'ambiente per i processi utente e l'uTLB Refill Handler per la gestione
- * degli indirizzi virtuali.
- */
-
-/* Variabili globali per la gestione della Swap Pool e sincronizzazione */
+/* Global variables definition */
 swap_t swapPool[POOLSIZE];
 int swapSemaphore;
 int masterSemaphore;
 
-/* Lista delle strutture di supporto (support_t) attualmente non in uso */
+// lista delle supprt struct libere
 LIST_HEAD(supStructs_freeList);
 
-/* ASID del processo che detiene attualmente l'accesso esclusivo alla page table
- */
 int page_mutex_holder;
 
-/* Semaforo per la sincronizzazione tra la shell e i suoi processi figli.
- * Garantisce che la shell resti in attesa della terminazione del figlio
- * lanciato. */
+// gestisce la concorrenza tra la shell e un suo processo figlio.
+// la shell rimarrà bloccata finche il processo figlio non termina.
 int shellSemaphore;
-
-/* Semafori per i dispositivi periferici (terminali, stampanti, etc.) */
 int devSemaphores[NSUPPSEM];
-
-/* Array statico delle strutture di supporto per i processi utente */
 support_t supStructs[UPROCMAX];
 
-/* Buffer statico per la lettura degli header dei file ELF senza gravare sullo
- * stack del kernel. Posizionato nella sezione .data per essere disponibile
- * all'avvio. */
+// buffer che usiamo per leggere l'header senza usare lo stack del kernel
+// static poiché viene usato solo in initProc.c
+// usando 'static' la variabile non va nello stack ma nella sezione (.data) del
+// kernel allocata dal compilatore ancora prima che il SO parta
 static unsigned int shellHeaderBuf[PAGESIZE / sizeof(unsigned int)];
 
-/* Dichiarazioni esterne per gli handler definiti in sysSupport.c, vmSupport.c e exceptions.c */
+/* Extern declarations for your exception handlers (assuming you name them
+ * logically in sysSupport.c and vmSupport.c) */
 extern void Pager();
 extern void GeneralExceptionHandler();
-extern void uTLB_RefillHandler();
 
-/**
- * Estrae una struttura di supporto libera dalla lista.
- * @return Puntatore a una support_t disponibile o NULL se esaurite.
- */
+// restituisce una struttura libera se esiste, NULL altrimenti
 support_t *allocateSupport() {
   if (list_empty(&supStructs_freeList))
     return NULL;
@@ -56,76 +40,97 @@ support_t *allocateSupport() {
   return container_of(l, support_t, s_list);
 }
 
-/**
- * Reinserisce una struttura di supporto nella lista delle disponibili.
- * @param s Puntatore alla struttura da rilasciare.
- */
+// rende una struttura nuovamente disponibile
 void deallocateSupport(support_t *s) {
   list_add(&(s->s_list), &supStructs_freeList);
 }
 
-/**
- * Processo Istanziatore (test).
- * Inizializza le strutture dati della Fase 3, prepara la shell e attende
- * la conclusione delle operazioni di sistema.
- */
-void test() {
-  /* Imposta l'handler per il refill del TLB nel vettore di pass-up */
-  passupvector_t *passupvector = (passupvector_t *)PASSUPVECTOR;
-  passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
+void Phase3_uTLB_RefillHandler() {
+  state_t *saved_state = (state_t *)BIOSDATAPAGE;
+  unsigned int missing_EntryHi = saved_state->entry_hi;
 
-  /* Inizializzazione della Swap Pool e relativo semaforo di mutua esclusione */
-  swapSemaphore = 1;
+  // Maschera CORRETTA per RISC-V: prende 20 bit per il VPN
+  unsigned int vpn = (missing_EntryHi & 0xFFFFF000) >> VPNSHIFT;
+  int p;
+  if (vpn >= 0xBFFFF)
+    p = MAXPAGES - 1; // stack page
+  else
+    p = vpn - 0x80000; // text/data pages
+
+  if (p < 0 || p >= MAXPAGES) {
+      PANIC();
+  }
+
+  extern pcb_t *currProc;
+  pteEntry_t missing_pte = currProc->p_supportStruct->sup_privatePgTbl[p];
+
+  setENTRYHI(missing_pte.pte_entryHI);
+  setENTRYLO(missing_pte.pte_entryLO);
+  TLBWR();
+  LDST(saved_state);
+}
+
+// Instantiator Process
+void test() {
+  passupvector_t *passupvector = (passupvector_t *)PASSUPVECTOR;
+  passupvector->tlb_refill_handler = (memaddr)Phase3_uTLB_RefillHandler;
+
+  // Initialize the Swap Pool and its semaphore
+  swapSemaphore = 1; // Mutual exclusion, start at
   initSwapStructs();
 
-  /* Inizializzazione dei semafori per i dispositivi periferici */
+  // Initialize device semaphores
   for (int i = 0; i < NSUPPSEM; i++) {
     devSemaphores[i] = 1;
   }
 
-  /* Organizzazione delle strutture di supporto in una lista libera */
+  /* Initialize supStructs_freeList and support structs */
   INIT_LIST_HEAD(&supStructs_freeList);
   for (int i = 0; i < UPROCMAX; i++) {
     deallocateSupport(&supStructs[i]);
   }
 
-  /* Inizializzazione dei semafori di sincronizzazione master e shell */
+  // Initialize synchronization semaphores
   masterSemaphore = 0;
   shellSemaphore = 0;
+
+  // contiene l'asid del processo che ha la mutua esclusione sulla page table
   page_mutex_holder = -1;
 
-  /* Configurazione dello stato iniziale del processore per il processo Shell
-   * (U-mode) */
+  // Prepare the initial processor state for the shell U-proc
   state_t shellState;
-  shellState.pc_epc = UPROCSTARTADDR; // Punto di ingresso standard: 0x8000.00B0
-  shellState.reg_sp = USERSTACKTOP;   // Cima dello stack utente: 0xC000.0000
-
-  /* Modalita' utente, interrupt abilitati, timer locale attivo */
+  shellState.pc_epc = UPROCSTARTADDR; // 0x8000.00B0
+  shellState.reg_sp = USERSTACKTOP;   // 0xC000.0000
+  // User-mode, interrupts enabled, local timer enabled
   shellState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
-
-  /* L'ASID 1 e' riservato alla shell (l'ASID 0 e' per i demoni del kernel) */
+  // Shell ASID is 1 (0 is for kernel daemons)
   shellState.entry_hi = (1 << ASIDSHIFT);
 
-  /* Allocazione e configurazione della Support Structure per la shell */
+  // Initialize the Support Structure for the shell
   support_t *shellSup = allocateSupport();
   if (shellSup == NULL)
     SYSCALL(TERMPROCESS, 0, 0, 0);
 
+  // la shell ha asid 1
   shellSup->sup_asid = 1;
 
-  /* Configurazione dei contesti per la gestione delle eccezioni della shell */
-  /* Contesto 0: TLB Exception Handler (Pager) */
+  // Context 0: TLB Exception Handler (The Pager)
   shellSup->sup_exceptContext[0].pc = (memaddr)Pager;
+
+  // estrazione di ramtop
   memaddr ramtop = RAMTOP(ramtop);
   shellSup->sup_exceptContext[0].stackPtr = ramtop - PAGESIZE;
-  shellSup->sup_exceptContext[0].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
 
-  /* Contesto 1: General Exception Handler */
+  shellSup->sup_exceptContext[0].status =
+      MSTATUS_MPIE_MASK | MSTATUS_MPP_M; // Kernel mode
+
+  /* Context 1: General Exception Handler */
   shellSup->sup_exceptContext[1].pc = (memaddr)GeneralExceptionHandler;
   shellSup->sup_exceptContext[1].stackPtr = ramtop - (2 * PAGESIZE);
-  shellSup->sup_exceptContext[1].status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
+  shellSup->sup_exceptContext[1].status =
+      MSTATUS_MPIE_MASK | MSTATUS_MPP_M; // Kernel mode
 
-  /* 10.3 - Lettura dell'header ELF del file shell dal dispositivo Flash 0 */
+  // 10.3
   volatile memaddr flash0Base =
       START_DEVREG + ((INTLINE_FLASH - INTLINE_DISK) * 0x80) + (0 * 0x10);
   volatile dtpreg_t *flash0 = (volatile dtpreg_t *)flash0Base;
@@ -133,41 +138,36 @@ void test() {
   flash0->data0 = (memaddr)shellHeaderBuf;
   SYSCALL(DOIO, (unsigned int)&(flash0->command), FLASHREAD, 0);
 
-  /* Calcolo del numero di pagine necessarie per il segmento text basandosi
-   * sull'header */
   unsigned int textSize = *((unsigned int *)shellHeaderBuf + 1);
   unsigned int numTextPages = textSize / PAGESIZE;
   if ((textSize % PAGESIZE) != 0) {
     numTextPages++;
   }
 
-  /* Inizializzazione della Page Table privata per la shell */
+  // initialize the page table for the shell
   for (int i = 0; i < MAXPAGES - 1; i++) {
     shellSup->sup_privatePgTbl[i].pte_entryHI =
         ((0x80000 + i) << VPNSHIFT) | (1 << ASIDSHIFT);
 
-    /* Le pagine del segmento text sono impostate in sola lettura */
     if (i < numTextPages) {
-      shellSup->sup_privatePgTbl[i].pte_entryLO = 0;
+      shellSup->sup_privatePgTbl[i].pte_entryLO = 0; // sola lettura
+
     } else {
-      /* Le altre pagine sono scrivibili */
-      shellSup->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+      shellSup->sup_privatePgTbl[i].pte_entryLO = DIRTYON; // scrivibile
     }
   }
 
-  /* Inizializzazione della pagina dedicata allo stack (sempre scrivibile) */
+  // stack page initialization
   shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryHI =
       (0xBFFFF << VPNSHIFT) | (1 << ASIDSHIFT);
   shellSup->sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
-  /* Creazione del processo Shell */
+  // Launch the shell process
   SYSCALL(CREATEPROCESS, (unsigned int)&shellState, 1, (unsigned int)shellSup);
 
-  /* Attesa della terminazione della shell tramite operazione P sul
-   * masterSemaphore */
+  // Wait for the shell to terminate (Blocking P operation)
   SYSCALL(PASSEREN, (unsigned int)&masterSemaphore, 0, 0);
 
-  /* Terminazione del sistema una volta che la shell ha concluso la sua
-   * esecuzione */
+  // 8. Shell is dead, now kill yourself (SYS2) to trigger a HALT
   SYSCALL(TERMPROCESS, 0, 0, 0);
 }

@@ -2,17 +2,10 @@
 #define CALC_H
 
 /**
- * Funzioni di supporto per l'applicazione calcolatrice.
- * Questo header definisce utilita' per la conversione e visualizzazione dei
- * risultati.
- */
-
-/**
  * Converte un intero in una stringa alfanumerica.
- * Gestisce i segni e numeri a piu' cifre
- * @param n Il numero intero da convertire [-99, 99]
- * @param s Il buffer di destinazione (deve essere sufficientemente capiente,
- * almeno 5 Byte)
+ * Gestisce numeri da -99 a 99 (sufficiente per calc).
+ * @param n Il numero da convertire.
+ * @param s Il buffer di destinazione (deve essere almeno 5 byte).
  */
 void itoa(int n, char s[]);
 
