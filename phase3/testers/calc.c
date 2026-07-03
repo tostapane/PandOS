@@ -41,6 +41,9 @@ int main() {
   if (charsRead != 2) {
     char errMsg[] = "you must insert ONE char per time!!! \n";
     SYSCALL(WRITETERMINAL, (unsigned int)errMsg, myStrlen(errMsg), 0);
+    char nl[] = "\n";
+    SYSCALL(WRITETERMINAL, (unsigned int)nl, 1, 0);
+
     SYSCALL(TERMINATE, 0, 0, 0);
   } else {
     n1 = resChar[0] - '0';

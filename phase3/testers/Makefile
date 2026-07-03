@@ -12,8 +12,10 @@ OBJDUMP = $(XT_PRG_PREFIX)objdump
 URISCV_DIR_PREFIX = /usr/local
 
 URISCV_DATA_DIR = $(URISCV_DIR_PREFIX)/share/uriscv
-URISCV_INCLUDE_DIR = /usr/include
-URISCV_LIB_DIR = /usr/lib/uriscv
+# URISCV_INCLUDE_DIR = /usr/include
+URISCV_INCLUDE_DIR = /usr/local/include
+URISCV_LIB_DIR = /usr/local/lib/uriscv
+# URISCV_LIB_DIR = /usr/lib/uriscv
 
 TDEFS = ../headers/print.h ../headers/tconst.h ../headers/utils.h Makefile
 

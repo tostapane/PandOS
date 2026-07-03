@@ -77,6 +77,7 @@ void Pager() {
     fifo_ptr = (fifo_ptr + 1) % POOLSIZE;
   }
 
+  // 10.5
   memaddr frameAddr = swapPoolBase + (frameIndex * PAGESIZE);
 
   if (swapPool[frameIndex].sw_asid != -1) {

@@ -17,13 +17,13 @@ void GeneralExceptionHandler() {
   unsigned int excCode = (cause & CAUSE_EXCCODE_MASK);
 
   if (excCode == SYSEXCEPTION) {
-    SyscallExceptionHandler(supStruct, excCode);
+    SyscallExceptionHandler(supStruct);
   } else {
     ProgramTrapHandler(supStruct);
   }
 }
 
-void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
+void SyscallExceptionHandler(support_t *supStruct) {
   /* Retrieve the arguments from the saved state's registers
    * a0 = syscall number, a1-a3 = parameters
    */
@@ -59,8 +59,7 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     volatile termreg_t *term_reg = (volatile termreg_t *)term0base;
     unsigned commandAddr = (unsigned)&term_reg->transm_command;
     int nsent = 0;
-    int i;
-    for (i = 0; i < len; ++i) {
+    for (int i = 0; i < len; ++i) {
       unsigned cmd = (addr[i] << 8) | TRANSMITCHAR;
       int ioStatus = SYSCALL(DOIO, commandAddr, cmd, 0);
       if ((ioStatus & 0xFF) != OKCHARTRANS) {
