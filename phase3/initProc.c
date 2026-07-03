@@ -101,6 +101,8 @@ void test() {
   state_t shellState;
   shellState.pc_epc = UPROCSTARTADDR; // 0x8000.00B0
   shellState.reg_sp = USERSTACKTOP;   // 0xC000.0000
+  // tutti gli interrupt (incluso il PLT, bit MTIE) abilitati
+  shellState.mie = MIE_ALL;
   // User-mode, interrupts enabled, local timer enabled
   shellState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
   // Shell ASID is 1 (0 is for kernel daemons)

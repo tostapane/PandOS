@@ -1,9 +1,9 @@
 #include "headers/vmSupport.h"
 #include "../headers/const.h"
-#include "headers/sysSupport.h"
 #include "headers/initProc.h"
-#include <uriscv/liburiscv.h>
+#include "headers/sysSupport.h"
 #include <uriscv/cpu.h>
+#include <uriscv/liburiscv.h>
 
 /* Module-local data structures */
 static int fifo_ptr; /* For the FIFO page replacement algorithm */
@@ -47,7 +47,8 @@ void Pager() {
   page_mutex_holder = supStruct->sup_asid;
 
   unsigned int missingPageEntryHi = supStruct->sup_exceptState[0].entry_hi;
-  unsigned int missingPageNumber = (missingPageEntryHi & 0xFFFFF000) >> VPNSHIFT;
+  unsigned int missingPageNumber =
+      (missingPageEntryHi & 0xFFFFF000) >> VPNSHIFT;
 
   int pageIndex = -1;
   if (missingPageNumber == 0xBFFFF) {
@@ -99,6 +100,10 @@ void Pager() {
                             ((oldAsid - 1) * 0x10);
     volatile dtpreg_t *flashDev = (dtpreg_t *)oldDevRegBase;
 
+    // mutua esclusione
+    int oldFlashSem = 8 + (oldAsid - 1);
+    SYSCALL(PASSEREN, (unsigned int)&devSemaphores[oldFlashSem], 0, 0);
+
     flashDev->data0 = frameAddr;
 
     unsigned int oldPageNo = swapPool[frameIndex].sw_pageNo;
@@ -107,6 +112,8 @@ void Pager() {
     int iostatus =
         SYSCALL(DOIO, (unsigned int)&(flashDev->command), flashCmd, 0);
 
+    // rilacio mutua esclusione
+    SYSCALL(VERHOGEN, (unsigned int)&devSemaphores[oldFlashSem], 0, 0);
     // In PandOS OK is 1 for READY
     if (iostatus != 1) {
       page_mutex_holder = -1;
@@ -118,13 +125,17 @@ void Pager() {
 
   memaddr devRegBase = START_DEVREG + ((INTLINE_FLASH - INTLINE_DISK) * 0x80) +
                        ((supStruct->sup_asid - 1) * 0x10);
+
+  int flashSem = 8 + (supStruct->sup_asid - 1); // NUOVO, dopo r.121
+  SYSCALL(PASSEREN, (unsigned int)&devSemaphores[flashSem], 0, 0);
+
   volatile dtpreg_t *flashDev = (dtpreg_t *)devRegBase;
 
   flashDev->data0 = frameAddr;
   unsigned int flashCmd = (pageIndex << 8) | FLASHREAD;
 
   int iostatus = SYSCALL(DOIO, (unsigned int)&(flashDev->command), flashCmd, 0);
-
+  SYSCALL(VERHOGEN, (unsigned int)&devSemaphores[flashSem], 0, 0);
   if (iostatus != 1) {
     page_mutex_holder = -1;
     SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);

@@ -138,6 +138,8 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
     newState.reg_sp = USERSTACKTOP;
     newState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
     newState.entry_hi = asid << ASIDSHIFT;
+    // tutti gli interrupt (incluso il PLT, bit MTIE) abilitati
+    newState.mie = MIE_ALL;
 
     support_t *newSupport = allocateSupport();
 
@@ -252,6 +254,9 @@ void ProgramTrapHandler(support_t *supStruct) {
   page_mutex_holder = -1;
   SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
 
+  // returning the struct to the freeList
+  deallocateSupport(supStruct);
+
   // cerco il semaforo corretto
   if (supStruct->sup_asid == 1) {
     /* When the shell terminates, either normally or abnormally, it should
@@ -261,9 +266,6 @@ void ProgramTrapHandler(support_t *supStruct) {
     // se e' un figlio della shell, sveglia la shell
     SYSCALL(VERHOGEN, (unsigned int)&shellSemaphore, 0, 0);
   }
-
-  // returning the struct to the freeList
-  deallocateSupport(supStruct);
 
   // clear the TLB
   TLBCLR();
