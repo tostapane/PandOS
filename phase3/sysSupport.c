@@ -169,9 +169,12 @@ void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode) {
                                     ((asid - 1) * 0x10);
     volatile dtpreg_t *flashDev = (volatile dtpreg_t *)flashDevBase;
 
+    int flashSem = 8 + (asid - 1);
+    SYSCALL(PASSEREN, (unsigned int)&devSemaphores[flashSem], 0, 0);
     flashDev->data0 = (memaddr)execHeaderBuf;
     int headerStatus =
         SYSCALL(DOIO, (unsigned int)&(flashDev->command), FLASHREAD, 0);
+    SYSCALL(VERHOGEN, (unsigned int)&devSemaphores[flashSem], 0, 0);
     /* Errore di lettura dell'header dal flash (spec 4.2/8): niente spawn, -1 al
      * chiamante. La support struct gia' allocata va restituita. */
     if (headerStatus != 1) {

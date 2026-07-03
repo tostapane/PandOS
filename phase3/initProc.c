@@ -45,36 +45,8 @@ void deallocateSupport(support_t *s) {
   list_add(&(s->s_list), &supStructs_freeList);
 }
 
-void uTLB_RefillHandler() {
-  state_t *saved_state = (state_t *)BIOSDATAPAGE;
-  unsigned int missing_EntryHi = saved_state->entry_hi;
-
-  // Maschera CORRETTA per RISC-V: prende 20 bit per il VPN
-  unsigned int vpn = (missing_EntryHi & 0xFFFFF000) >> VPNSHIFT;
-  int p;
-  if (vpn >= 0xBFFFF)
-    p = MAXPAGES - 1; // stack page
-  else
-    p = vpn - 0x80000; // text/data pages
-
-  if (p < 0 || p >= MAXPAGES) {
-    PANIC();
-  }
-
-  extern pcb_t *currProc;
-  pteEntry_t missing_pte = currProc->p_supportStruct->sup_privatePgTbl[p];
-
-  setENTRYHI(missing_pte.pte_entryHI);
-  setENTRYLO(missing_pte.pte_entryLO);
-  TLBWR();
-  LDST(saved_state);
-}
-
 // Instantiator Process
 void test() {
-  passupvector_t *passupvector = (passupvector_t *)PASSUPVECTOR;
-  passupvector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
-
   // Initialize the Swap Pool and its semaphore
   swapSemaphore = 1; // Mutual exclusion, start at
   initSwapStructs();
@@ -100,11 +72,13 @@ void test() {
   // Prepare the initial processor state for the shell U-proc
   state_t shellState;
   shellState.pc_epc = UPROCSTARTADDR; // 0x8000.00B0
-  shellState.reg_sp = USERSTACKTOP;   // 0xC000.0000
+  shellState.reg_sp =
+      USERSTACKTOP; // 0xC000.0000
+                    // User-mode, interrupts enabled, local timer enabled
+  shellState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
   // tutti gli interrupt (incluso il PLT, bit MTIE) abilitati
   shellState.mie = MIE_ALL;
-  // User-mode, interrupts enabled, local timer enabled
-  shellState.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_U;
+
   // Shell ASID is 1 (0 is for kernel daemons)
   shellState.entry_hi = (1 << ASIDSHIFT);
 
@@ -120,7 +94,8 @@ void test() {
   shellSup->sup_exceptContext[0].pc = (memaddr)Pager;
 
   // estrazione di ramtop
-  memaddr ramtop = RAMTOP(ramtop);
+  memaddr ramtop;
+  RAMTOP(ramtop);
   shellSup->sup_exceptContext[0].stackPtr = ramtop - PAGESIZE;
 
   shellSup->sup_exceptContext[0].status =
