@@ -120,7 +120,9 @@ void test() {
   if (shellHeaderStatus != 1)
     PANIC();
 
-  unsigned int textSize = *((unsigned int *)shellHeaderBuf + 1);
+  /* la dimensione del .text e' la parola 3 dell'header a.out
+   * (AOUT_HE_TEXT_MEMSZ); la parola 1 e' l'entry point */
+  unsigned int textSize = *((unsigned int *)shellHeaderBuf + 3);
   unsigned int numTextPages = textSize / PAGESIZE;
   if ((textSize % PAGESIZE) != 0) {
     numTextPages++;

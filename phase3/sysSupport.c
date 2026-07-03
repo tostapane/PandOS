@@ -182,8 +182,9 @@ void SyscallExceptionHandler(support_t *supStruct) {
       break;
     }
 
-    // estrazione dimensione del .text
-    unsigned int textSize = *((unsigned int *)execHeaderBuf + 1);
+    // estrazione dimensione del .text: parola 3 dell'header a.out
+    // (AOUT_HE_TEXT_MEMSZ); la parola 1 e' l'entry point
+    unsigned int textSize = *((unsigned int *)execHeaderBuf + 3);
     unsigned int numTextPages = textSize / PAGESIZE;
     if ((textSize % PAGESIZE) != 0) {
       numTextPages++;
@@ -255,6 +256,14 @@ void ProgramTrapHandler(support_t *supStruct) {
   // rilasciamo il semaforo prima di morire
   page_mutex_holder = -1;
   SYSCALL(VERHOGEN, (unsigned int)&swapSemaphore, 0, 0);
+
+  /* Con al piu' un U-proc attivo (la shell si blocca su shellSemaphore
+   * durante l'EXECUTE), sem 32 == 0 implica che a detenerlo e' il
+   * processo morente (morto durante una READTERMINAL, es. per TLB-Mod
+   * sulla store in memoria utente): senza questa V la prossima
+   * READTERMINAL della shell resterebbe bloccata per sempre. */
+  if (devSemaphores[32] == 0)
+    SYSCALL(VERHOGEN, (unsigned int)&devSemaphores[32], 0, 0);
 
   // returning the struct to the freeList
   deallocateSupport(supStruct);
