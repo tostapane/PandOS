@@ -196,6 +196,7 @@ void SyscallExceptionHandler(support_t *supStruct) {
           ((0x80000 + i) << VPNSHIFT) | (asid << ASIDSHIFT);
 
       // .text in readonly
+      // 10.4
       if (i < numTextPages) {
         newSupport->sup_privatePgTbl[i].pte_entryLO = 0; // sola lettura
       } else {
@@ -265,9 +266,6 @@ void ProgramTrapHandler(support_t *supStruct) {
   if (devSemaphores[32] == 0)
     SYSCALL(VERHOGEN, (unsigned int)&devSemaphores[32], 0, 0);
 
-  // returning the struct to the freeList
-  deallocateSupport(supStruct);
-
   // cerco il semaforo corretto
   if (supStruct->sup_asid == 1) {
     /* When the shell terminates, either normally or abnormally, it should
@@ -278,7 +276,14 @@ void ProgramTrapHandler(support_t *supStruct) {
     SYSCALL(VERHOGEN, (unsigned int)&shellSemaphore, 0, 0);
   }
 
+  // 10.7
+  // returning the struct to the freeList
+  deallocateSupport(supStruct);
+
   // clear the TLB
+  // invalidazione entry di un asid morente
+  // cancellare selettivamente le entry costerebbe un loop di probe (TLBP) più
+  // caro dei tlb miss che esso evita
   TLBCLR();
 
   // termina il processo

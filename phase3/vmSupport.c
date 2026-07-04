@@ -2,6 +2,7 @@
 #include "../headers/const.h"
 #include "headers/initProc.h"
 #include "headers/sysSupport.h"
+#include <uriscv/aout.h>
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
 
@@ -25,11 +26,25 @@ void initSwapStructs() {
   }
   fifo_ptr = 0;
 
-  // Seguendo le specifiche della Phase 3, invece di cercare di indovinare
-  // la dimensione del kernel leggendo un header che non è in memoria,
+  // Seguendo le specifiche della Phase 3,
   // sovrastimiamo la grandezza del kernel a 32 frame (0x20000 byte).
-  // Quindi lo Swap Pool inizia a 0x20020000.
-  swapPoolBase = 0x20020000;
+  // Quindi lo Swap Pool inizia a 0x20020000. (non più)
+  // swapPoolBase = 0x20020000;
+
+  // 10.5
+  // leggiamo l'header a.out del kernel (caricato dal .core a RAMSTART+PAGESIZE)
+  // per situare lo swap pool subito dopo .text e .data invece di sovrastimare
+  // il kernel a 32 frame
+  memaddr *hdr =
+      (memaddr *)(RAMSTART + PAGESIZE); // la prima pagina 'PAGESIZE' è
+                                        // riservata al BIOS/kernel stack
+  memaddr dataEnd =
+      hdr[AOUT_HE_DATA_VADDR] +
+      hdr[AOUT_HE_DATA_MEMSZ]; // indirizzo dove .data viene caricato in memoria
+                               // (inizio) + la sua dimensione = fine dell'OS
+  if (hdr[AOUT_HE_DATA_FILESZ] > hdr[AOUT_HE_DATA_MEMSZ])
+    dataEnd = hdr[AOUT_HE_DATA_VADDR] + hdr[AOUT_HE_DATA_FILESZ];
+  swapPoolBase = (dataEnd + PAGESIZE - 1) & ~(PAGESIZE - 1);
 }
 
 void Pager() {
@@ -64,6 +79,7 @@ void Pager() {
     return;
   }
 
+  // 10.3
   int frameIndex = -1;
   for (int i = 0; i < POOLSIZE; i++) {
     if (swapPool[i].sw_asid == -1) {
@@ -77,7 +93,6 @@ void Pager() {
     fifo_ptr = (fifo_ptr + 1) % POOLSIZE;
   }
 
-  // 10.5
   memaddr frameAddr = swapPoolBase + (frameIndex * PAGESIZE);
 
   if (swapPool[frameIndex].sw_asid != -1) {
@@ -85,6 +100,7 @@ void Pager() {
 
     swapPool[frameIndex].sw_pte->pte_entryLO &= ~VALIDON;
 
+    // 10.1
     setENTRYHI(swapPool[frameIndex].sw_pte->pte_entryHI);
     TLBP();
 
@@ -154,6 +170,7 @@ void Pager() {
       (supStruct->sup_privatePgTbl[pageIndex].pte_entryLO & DIRTYON) |
       frameAddr | VALIDON;
 
+  // 10.1
   setENTRYHI(supStruct->sup_privatePgTbl[pageIndex].pte_entryHI);
   TLBP();
 

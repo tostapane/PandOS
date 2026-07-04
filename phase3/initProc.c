@@ -93,6 +93,7 @@ void test() {
   // Context 0: TLB Exception Handler (The Pager)
   shellSup->sup_exceptContext[0].pc = (memaddr)Pager;
 
+  // 10.6
   // estrazione di ramtop
   memaddr ramtop;
   RAMTOP(ramtop);
@@ -133,6 +134,7 @@ void test() {
     shellSup->sup_privatePgTbl[i].pte_entryHI =
         ((0x80000 + i) << VPNSHIFT) | (1 << ASIDSHIFT);
 
+    // 10.4
     if (i < numTextPages) {
       shellSup->sup_privatePgTbl[i].pte_entryLO = 0; // sola lettura
 
