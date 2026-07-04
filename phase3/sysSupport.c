@@ -86,6 +86,10 @@ void SyscallExceptionHandler(support_t *supStruct) {
     unsigned int vAddr =
         (unsigned int)supStruct->sup_exceptState[GENERALEXCEPT].reg_a1;
     char *virtAddr = (char *)supStruct->sup_exceptState[GENERALEXCEPT].reg_a1;
+    /* a2 = capacita' del buffer del chiamante ('\n' incluso);
+       a2 == 0 mantiene il comportamento senza limite, per
+       compatibilita' con i tester forniti che non lo passano */
+    unsigned int maxLen = supStruct->sup_exceptState[GENERALEXCEPT].reg_a2;
     unsigned int nrecvd = 0;
     while (1) {
       // controllo che legga dalla parte di memoria corretta
@@ -105,8 +109,14 @@ void SyscallExceptionHandler(support_t *supStruct) {
       }
       // uso una maschera opposta a quella usata per isolare lo status
       char c = (ioStatus & 0xFF00) >> 8;
-      virtAddr[nrecvd] = c;
-      nrecvd++;
+      /* scriviamo solo se c'e' spazio nel buffer: i caratteri oltre
+         il limite vengono letti dal device e scartati fino al '\n',
+         cosi' l'eccesso non resta in coda come input della prossima
+         READTERMINAL */
+      if (maxLen == 0 || nrecvd < maxLen) {
+        virtAddr[nrecvd] = c;
+        nrecvd++;
+      }
       if (c == '\n') {
         supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = nrecvd;
         break;

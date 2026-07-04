@@ -20,7 +20,8 @@ int main() {
 
     /* legge l'input inserito dall'utente e lo mette in inputBuf
      * la SYSCALL blocca la shell finchè l'utente non preme invio. */
-    int charsRead = SYSCALL(READTERMINAL, (unsigned int)inputBuf, 0, 0);
+    int charsRead =
+        SYSCALL(READTERMINAL, (unsigned int)inputBuf, sizeof(inputBuf), 0);
 
     /* sostituzione del newline (\n) con il nullterm (\0)
      * permette a myStrcmp di capire quando termina la stringa
