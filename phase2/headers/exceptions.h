@@ -1,45 +1,17 @@
 #ifndef PANDOS_EXCEPTIONS_H
 #define PANDOS_EXCEPTIONS_H
 
-#include "../../../uriscv-latest/src/include/uriscv/cpu.h"
 #include "../../headers/const.h"
 #include "../../headers/types.h"
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 #include "./interrupts.h"
 #include "./scheduler.h"
+#include "initial.h"
+#include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
 
-// SEZIONE 2.1: Dichiarazione delle variabili globali del Nucleo
-
-/**
- * @brief Conteggio dei processi avviati ma non ancora terminati.
- * Incrementato da `CreateProcess`, decrementato durante la terminazione.
- */
-extern int process_count;
-
-/**
- * @brief Conteggio dei processi bloccati in attesa di I/O o del timer
- * (soft-blocked). Incrementato quando un processo si blocca su un semaforo di
- * device/timer, decrementato quando viene sbloccato o terminato.
- */
-extern int soft_block_count; 
-
-/**
- * @brief Coda dei processi pronti per essere eseguiti (in stato "ready").
- * Gestita dallo scheduler e dalle funzioni che sbloccano i processi.
- */
-extern struct list_head ready_queue;
-
-/**
- * @brief Array dei semafori per i dispositivi e per il pseudo-clock.
- * L'indice del semaforo corrisponde a un device specifico.
- * Dimensione: 48 (device) + 1 (pseudo-clock) = 49.
- * L'ordine è: 8 dischi, 8 flash, 8 network, 8 stampanti, 8 terminali
- * (ricezione), 8 terminali (trasmissione), 1 pseudo-clock.
- */
-// int dev_semaphores[TOT_DEV_SEM];
-
+void uTLB_RefillHandler(void);
 /**
  * @brief Punto di ingresso principale per la gestione di tutte le eccezioni.
  *
@@ -75,11 +47,45 @@ void programTrapHandler(void);
 void tlbHandler(void);
 
 /**
- * @brief Gestore "placeholder" per gli eventi di TLB-Refill.
+ * @brief Copia un blocco di memoria da una sorgente a una destinazione.
  *
- * Questa funzione è un gestore speciale che viene chiamato solo per eventi di
- * TLB-Refill. Per la Fase 2, il suo codice è fisso.
+ * @param dest Puntatore alla destinazione della copia.
+ * @param src Puntatore alla sorgente della copia.
+ * @param n Numero di byte da copiare.
+ * @return Puntatore alla destinazione.
  */
-void uTLB_RefillHandler(void);
+void *memcpy(void *dest, const void *src, unsigned int n);
+
+/**
+ * @brief Funzione ausiliaria ricorsiva per la ricerca di un PCB all'interno
+ * dell'albero genealogico.
+ *
+ * @param root Puntatore al nodo radice da cui iniziare la ricerca (solitamente
+ * `root_proc`).
+ * @param pid PID da cercare.
+ * @return Puntatore al PCB trovato o `NULL`.
+ */
+static pcb_t *find_pcb_recursive(pcb_t *root, int pid);
+
+/**
+ * @brief Cerca e restituisce il descrittore del processo (PCB) corrispondente a
+ * un dato PID. Tenta di individuare il processo navigando l'albero genealogico
+ * partendo dalla root locale in uso.
+ *
+ * @param pid L'identificativo numerico (Process ID) che stiamo cercando.
+ * @return Puntatore al blocco di controllo (`pcb_t *`) se trovato, altrimenti
+ * `NULL`.
+ */
+static pcb_t *find_pcb(int pid);
+
+/**
+ * @brief Distrugge in modo ricorsivo il processo indicato e l'intera sua stirpe
+ * (tutti i figli derivati). Si occupa di de-allocare i PCB rimuovendoli da
+ * qualsiasi coda o semaforo essi siano legati.
+ *
+ * @param proc Puntatore al PCB bersaglio che fa da "nodo radice" da epurare per
+ * la terminazione.
+ */
+static void recursive_terminate(pcb_t *proc);
 
 #endif // PANDOS_EXCEPTIONS_H

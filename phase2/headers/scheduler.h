@@ -7,9 +7,11 @@
 #include <uriscv/const.h>
 #include <uriscv/types.h>
 
-/* 
- * The nucleus should implement a simple preemptive round-robin scheduling
- * algorithm with a time slice value of 5 mills (const TIMESLICE).
+/**
+ * @brief Esegue lo scheduling dei processi (Round-Robin preemptivo).
+ *
+ * Il Nucleo implementa un semplice algoritmo di scheduling assegnando a ciascun
+ * processo in readyQueue un "time slice" massimo di 5 millisecondi (TIMESLICE).
  */
 void scheduler(void);
 

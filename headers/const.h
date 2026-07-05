@@ -195,18 +195,25 @@
 /*
  * NOTE: Function coming from a 2012 project
 
-* This function takes the CAUSE register (3.3 of pops) and reads the bits corresponding to IP
- * The "il_no" parameter represents all the possible devices we have. (file /umps3/umps/arch.h line 68)
- * So the function allows us to go and check for each device which of them is working.
+* This function takes the CAUSE register (3.3 of pops) and reads the bits
+corresponding to IP
+ * The "il_no" parameter represents all the possible devices we have. (file
+/umps3/umps/arch.h line 68)
+ * So the function allows us to go and check for each device which of them is
+working.
  * If a device is running CAUSE_IP_GET returns 1, 0 otherwise.
- * As requested by chapter 3.4 exception 0 we call the interrupt of the first device
+ * As requested by chapter 3.4 exception 0 we call the interrupt of the first
+device
  * that we find "on" / "running" / "of which we get 1 from this function"
 */
-#define CAUSE_IP_GET(cause, il_no) ((cause) & (1 << ((il_no) + 8))) // performs a bit shift based on the parameters
+#define CAUSE_IP_GET(cause, il_no)                                             \
+  ((cause) &                                                                   \
+   (1 << ((il_no) + 8))) // performs a bit shift based on the parameters
 
 #define NRSEMAPHORES 49 /* Numero semafori devices + pseudo clock */
-#define NSUPPSEM 48     /* Numero di semafori devices per il livello di supporto */
-#define NCPU 8          /* Numero di processori attivi */
+#define NSUPPSEM 48 /* Numero di semafori devices per il livello di supporto   \
+                     */
+#define NCPU 8      /* Numero di processori attivi */
 
 #define DISKBACK 1
 #define FLASHBACK 0
@@ -222,7 +229,8 @@
 #define START_DEVREG 0x10000054
 
 #define STATE_T_SIZE_IN_BYTES 148
-#define GET_EXCEPTION_STATE_PTR(i) ((state_t *)(BIOSDATAPAGE + i * STATE_T_SIZE_IN_BYTES))
+#define GET_EXCEPTION_STATE_PTR(i)                                             \
+  ((state_t *)(BIOSDATAPAGE + i * STATE_T_SIZE_IN_BYTES))
 
 #define IRT_START 0x10000300
 #define IRT_RP_BIT_ON (1 << 28)

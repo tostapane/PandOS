@@ -58,7 +58,11 @@ dkms.conf
 /.vscode/
 /build/
 *.uriscv
-
+submit_phase*/headers
+submit_phase*/phase*
+submit_phase*/CMakeLists.txt
 
 # clangd configuration
 .clangd
+*.txt
+CONTEXT.md
