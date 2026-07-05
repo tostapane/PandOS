@@ -2,6 +2,7 @@
 #include "../headers/const.h"
 #include "headers/initProc.h"
 #include "headers/vmSupport.h"
+#include <uriscv/aout.h>
 #include <uriscv/const.h>
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
@@ -86,10 +87,6 @@ void SyscallExceptionHandler(support_t *supStruct) {
     unsigned int vAddr =
         (unsigned int)supStruct->sup_exceptState[GENERALEXCEPT].reg_a1;
     char *virtAddr = (char *)supStruct->sup_exceptState[GENERALEXCEPT].reg_a1;
-    /* a2 = capacita' del buffer del chiamante ('\n' incluso);
-       a2 == 0 mantiene il comportamento senza limite, per
-       compatibilita' con i tester forniti che non lo passano */
-    unsigned int maxLen = supStruct->sup_exceptState[GENERALEXCEPT].reg_a2;
     unsigned int nrecvd = 0;
     while (1) {
       // controllo che legga dalla parte di memoria corretta
@@ -109,14 +106,8 @@ void SyscallExceptionHandler(support_t *supStruct) {
       }
       // uso una maschera opposta a quella usata per isolare lo status
       char c = (ioStatus & 0xFF00) >> 8;
-      /* scriviamo solo se c'e' spazio nel buffer: i caratteri oltre
-         il limite vengono letti dal device e scartati fino al '\n',
-         cosi' l'eccesso non resta in coda come input della prossima
-         READTERMINAL */
-      if (maxLen == 0 || nrecvd < maxLen) {
-        virtAddr[nrecvd] = c;
-        nrecvd++;
-      }
+      virtAddr[nrecvd] = c;
+      nrecvd++;
       if (c == '\n') {
         supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = nrecvd;
         break;
@@ -192,9 +183,9 @@ void SyscallExceptionHandler(support_t *supStruct) {
       break;
     }
 
-    // estrazione dimensione del .text: parola 3 dell'header a.out
-    // (AOUT_HE_TEXT_MEMSZ); la parola 1 e' l'entry point
-    unsigned int textSize = *((unsigned int *)execHeaderBuf + 3);
+    // estrazione dimensione del .text dall'header a.out
+    unsigned int textSize =
+        *((unsigned int *)execHeaderBuf + AOUT_HE_TEXT_MEMSZ);
     unsigned int numTextPages = textSize / PAGESIZE;
     if ((textSize % PAGESIZE) != 0) {
       numTextPages++;
@@ -220,8 +211,16 @@ void SyscallExceptionHandler(support_t *supStruct) {
     newSupport->sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
     // creo il nuovo processo a priorita' 1
-    SYSCALL(CREATEPROCESS, (unsigned int)&newState, 1,
-            (unsigned int)newSupport);
+    int newPid = SYSCALL(CREATEPROCESS, (unsigned int)&newState, 1,
+                         (unsigned int)newSupport);
+
+    /* NSYS1 ritorna NOPROC se non ci sono PCB liberi: nessun figlio fara'
+     * mai la V su shellSemaphore, quindi non dobbiamo bloccarci. */
+    if (newPid == NOPROC) {
+      deallocateSupport(newSupport);
+      supStruct->sup_exceptState[GENERALEXCEPT].reg_a0 = -1;
+      break;
+    }
 
     // fermo la shell
     SYSCALL(PASSEREN, (unsigned int)&shellSemaphore, 0, 0);

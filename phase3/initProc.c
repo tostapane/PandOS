@@ -1,6 +1,7 @@
 #include "headers/initProc.h"
 #include "../headers/const.h"
 #include "headers/vmSupport.h"
+#include <uriscv/aout.h>
 #include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
 
@@ -121,9 +122,9 @@ void test() {
   if (shellHeaderStatus != 1)
     PANIC();
 
-  /* la dimensione del .text e' la parola 3 dell'header a.out
-   * (AOUT_HE_TEXT_MEMSZ); la parola 1 e' l'entry point */
-  unsigned int textSize = *((unsigned int *)shellHeaderBuf + 3);
+  // dimensione del .text dall'header a.out
+  unsigned int textSize =
+      *((unsigned int *)shellHeaderBuf + AOUT_HE_TEXT_MEMSZ);
   unsigned int numTextPages = textSize / PAGESIZE;
   if ((textSize % PAGESIZE) != 0) {
     numTextPages++;
