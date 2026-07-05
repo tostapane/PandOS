@@ -8,48 +8,44 @@
     "devices": {
         "flash0": {
             "enabled": true,
-            "file": "phase3/testers/shell.uriscv"
+            "file": "testers/shell.uriscv"
         },
         "flash1": {
             "enabled": true,
-            "file": "phase3/testers/calc.uriscv"
+            "file": "testers/fibEight.uriscv"
         },
         "flash2": {
             "enabled": true,
-            "file": "phase3/testers/sl.uriscv"
+            "file": "testers/echo.uriscv"
         },
         "flash3": {
             "enabled": true,
-            "file": "phase3/testers/date.uriscv"
+            "file": "testers/fibEleven.uriscv"
         },
         "flash4": {
             "enabled": true,
-            "file": "phase3/testers/echo.uriscv"
+            "file": "testers/uname.uriscv"
         },
         "flash5": {
             "enabled": true,
-            "file": "phase3/testers/fibEight.uriscv"
+            "file": "testers/date.uriscv"
         },
         "flash6": {
             "enabled": true,
-            "file": "phase3/testers/fibEleven.uriscv"
+            "file": "testers/sl.uriscv"
         },
         "flash7": {
             "enabled": true,
-            "file": "phase3/testers/uname.uriscv"
+            "file": "testers/calc.uriscv"
         },
         "terminal0": {
             "enabled": true,
             "file": "term0.uriscv"
-        },
-        "terminal1": {
-            "enabled": true,
-            "file": "term1.uriscv"
         }
     },
     "execution-rom": "/usr/local/share/uriscv/exec.rom.uriscv",
     "num-processors": 1,
-    "num-ram-frames": 128,
+    "num-ram-frames": 256,
     "symbol-table": {
         "asid": 64,
         "file": "build/MultiPandOS.stab.uriscv"

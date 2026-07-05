@@ -90,7 +90,7 @@ Entry point for non-TLB exceptions forwarded to the Support Level (Context 1). R
 - **`ProgramTrapHandler`** for all other traps.
 
 ### SYSCALL Handler (`SyscallExceptionHandler`)
-
+****
 Reads the syscall number from `reg_a0` of the saved state. Increments the saved PC by 4 before branching to avoid re-executing the `ecall` instruction upon return. Implements:
 
 - **`TERMINATE` (SYS2)**: Treated identically to a program trap - triggers `ProgramTrapHandler` for orderly cleanup. This is how a U-proc requests voluntary termination.
