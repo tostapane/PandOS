@@ -3,8 +3,8 @@
 #include "../headers/utils.h"
 
 // array dei comandi/programmi disponibili
-command programs[] = {{"calc", 2}, {"sl", 3},       {"date", 4},
-                      {"echo", 5}, {"fibEight", 6}, {"fibEleven", 7},
+command programs[] = {{"calc", 2},     {"sl", 3},         {"date", 4},
+                      {"sysStress", 5}, {"vmStress", 6},  {"termStress", 7},
                       {"uname", 8}};
 
 int main() {

@@ -24,15 +24,15 @@
         },
         "flash4": {
             "enabled": true,
-            "file": "phase3/testers/echo.uriscv"
+            "file": "phase3/testers/sysStress.uriscv"
         },
         "flash5": {
             "enabled": true,
-            "file": "phase3/testers/fibEight.uriscv"
+            "file": "phase3/testers/vmStress.uriscv"
         },
         "flash6": {
             "enabled": true,
-            "file": "phase3/testers/fibEleven.uriscv"
+            "file": "phase3/testers/termStress.uriscv"
         },
         "flash7": {
             "enabled": true,
