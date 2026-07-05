@@ -12,8 +12,14 @@ OBJDUMP = $(XT_PRG_PREFIX)objdump
 URISCV_DIR_PREFIX = /usr/local
 
 URISCV_DATA_DIR = $(URISCV_DIR_PREFIX)/share/uriscv
+# for debian
 URISCV_INCLUDE_DIR = /usr/include
 URISCV_LIB_DIR = /usr/lib/uriscv
+# for arch
+# URISCV_INCLUDE_DIR = /usr/local/include
+# URISCV_LIB_DIR = /usr/local/lib/uriscv
+
+
 
 TDEFS = ../headers/print.h ../headers/tconst.h ../headers/utils.h $(URISCV_INCLUDE_DIR)/uriscv/liburiscv.h Makefile
 
