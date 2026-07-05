@@ -11,6 +11,7 @@
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
 
+void uTLB_RefillHandler(void);
 /**
  * @brief Punto di ingresso principale per la gestione di tutte le eccezioni.
  *

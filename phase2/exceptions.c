@@ -20,6 +20,34 @@ void *memcpy(void *dest, const void *src, unsigned int n) {
   return dest;
 }
 
+void uTLB_RefillHandler() {
+  state_t *saved_state = (state_t *)BIOSDATAPAGE;
+  unsigned int missing_EntryHi = saved_state->entry_hi;
+
+  // Maschera CORRETTA per RISC-V: prende 20 bit per il VPN
+  unsigned int vpn = (missing_EntryHi & 0xFFFFF000) >> VPNSHIFT;
+  int p;
+  if (vpn == 0xBFFFF)
+    p = MAXPAGES - 1; // stack page
+  else
+    p = vpn - 0x80000; // text/data pages
+
+  if (p < 0 || p >= MAXPAGES) {
+    setENTRYHI(missing_EntryHi); // was: PANIC();
+    setENTRYLO(0);
+    TLBWR();
+    LDST(saved_state);
+  }
+
+  extern pcb_t *currProc;
+  pteEntry_t missing_pte = currProc->p_supportStruct->sup_privatePgTbl[p];
+
+  setENTRYHI(missing_pte.pte_entryHI);
+  setENTRYLO(missing_pte.pte_entryLO);
+  TLBWR();
+  LDST(saved_state);
+}
+
 /**
  * @brief Funzione ricorsiva per cercare un PCB dato un PID, partendo da una
  * radice.
@@ -461,11 +489,9 @@ void syscallHandler(void) {
       // programTrapHandler.
       exception_state->cause = (exception_state->cause & ~CAUSE_EXCCODE_MASK) |
                                (PRIVINSTR << CAUSESHIFT);
-
-      // IMPORTANTE: in questo caso specifico di errore,
-      // il PC non dovrebbe essere avanzato perché l'istruzione è illegale.
-      exception_state->pc_epc -= WORDLEN;
     }
+    // per syscall > 0
+    exception_state->pc_epc -= WORDLEN;
     programTrapHandler();
   }
   }

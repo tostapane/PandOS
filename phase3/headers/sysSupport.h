@@ -13,7 +13,7 @@ extern void Pager();
 void GeneralExceptionHandler();
 
 /* Handles SYSCALLs >= 1 */
-void SyscallExceptionHandler(support_t *supStruct, unsigned int excCode);
+void SyscallExceptionHandler(support_t *supStruct);
 
 /* Handles U-proc fatal errors */
 void ProgramTrapHandler(support_t *supStruct);

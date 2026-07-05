@@ -3,6 +3,7 @@ project(MultiPandOS LANGUAGES C ASM)
 
 set(XT_PRG_PREFIX riscv64-unknown-elf-)
 set(URISCV_SRC /usr/local/share/uriscv)
+# for Arch 
 # set(URISCV_INC /usr/local/include)
 # for debian
 set(URISCV_INC /usr/include)
